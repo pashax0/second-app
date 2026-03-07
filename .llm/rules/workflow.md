@@ -23,9 +23,38 @@ One loop for all tasks. Plan depth scales with complexity — a simple fix needs
 - **Never chain multiple steps automatically** — next step starts only on explicit user instruction
 - Keep changes focused and atomic
 
-## 3. Verify
+## 3. Verify (autonomous)
 
-- Run `/verify` on changed files
+After implementing, verify **without asking the user** using this sequence:
+
+```bash
+# 1. TypeScript check
+pnpm --filter mobile typecheck
+
+# 2. Start dev server, capture logs
+kill $(lsof -ti:8081) 2>/dev/null; true
+cd apps/mobile && pnpm web -- --clear > /tmp/expo.log 2>&1 &
+# Wait for bundling
+sleep 30 && grep -E "Bundled|error|ERROR|Failed" /tmp/expo.log
+
+# 3. Confirm server is up
+curl -s http://localhost:8081/ | grep -c "DOCTYPE"
+
+# 4. Wait for runtime errors (Expo forwards browser console to terminal)
+sleep 10 && grep -E "^( ERROR| WARN)" /tmp/expo.log
+
+# 5. Kill server when done
+kill $(lsof -ti:8081) 2>/dev/null
+```
+
+**Pass criteria:**
+- TypeScript: exit code 0
+- Metro: "Bundled Xms" present, no "error"/"Failed" lines
+- Server: curl returns HTML
+- Runtime: no `ERROR` lines in log after load
+
+**Only notify user when all checks pass.** If any check fails — fix and re-run autonomously.
+
 - Confirm the plan step is fully realized — nothing skipped
 - Quick self-check: architecture, naming conventions, edge cases
 - If new findings affect the solution — address them before moving on
@@ -33,6 +62,7 @@ One loop for all tasks. Plan depth scales with complexity — a simple fix needs
 ## 4. Fix
 
 - Address failures immediately — don't defer to later steps
+- Re-run the full verify sequence after each fix
 
 _(Repeat 2–4 for each milestone)_
 
