@@ -1,42 +1,55 @@
-# Project
+# Daily Drop Shop
 
-<!-- TODO: Short project description (1-2 sentences) -->
+Мобильное приложение (iOS + Android) — интернет-магазин со штучными товарами.
+Главная фишка: ежедневные дропы — товары выкладываются раз в день в настраиваемое время, ограниченным количеством. Непроданные товары доступны в архиве с фильтрами.
 
 ## Tech Stack
 
-<!-- TODO: List your stack -->
-<!-- Example:
-- Language: ...
-- Runtime: ...
-- Framework: ...
-- DB: ...
--->
+- Language: TypeScript
+- Runtime: Expo (managed workflow) + React Native
+- Navigation: Expo Router (file-based)
+- Styling: NativeWind (Tailwind CSS for RN)
+- Server state: TanStack Query
+- Client state: Zustand
+- Forms: React Hook Form + Zod
+- Backend: Supabase (auth, PostgreSQL, storage, real-time, edge functions)
+- Monorepo: pnpm workspaces
 
 ## Commands
 
-<!-- TODO: Fill in your actual commands -->
-
 ```bash
 # Install
-# <install command>
+pnpm install
 
-# Dev
-# <dev server command>
+# Dev (mobile)
+pnpm --filter mobile start
 
 # Build
-# <build command>
+pnpm --filter mobile build
 
 # Test
-# <test command>
+pnpm --filter mobile test
 
 # Lint
-# <lint command>
+pnpm --filter mobile lint
+
+# Type check
+pnpm --filter mobile typecheck
 ```
 
 ## Architecture
 
-<!-- TODO: Key architectural decisions, folder structure, patterns used -->
-<!-- See docs/architecture.md for details -->
+```
+apps/
+  mobile/        # Expo React Native app
+packages/
+  shared/        # Shared types, Zod schemas, utilities
+supabase/
+  migrations/    # SQL migrations
+  functions/     # Edge Functions (scheduled drops, push notifications)
+```
+
+See [docs/architecture.md](docs/architecture.md) for details.
 
 ## Rules
 
@@ -45,3 +58,4 @@
 @.llm/rules/git-workflow.md
 @.llm/rules/testing.md
 @.llm/rules/workflow.md
+@.llm/rules/react-native.md

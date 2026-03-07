@@ -10,6 +10,18 @@ build/
 .next/
 out/
 
+# Expo
+.expo/
+apps/mobile/dist/
+apps/mobile/.expo/
+
+# pnpm
+.pnpm-store/
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+
 # Environment
 .env
 .env.local
