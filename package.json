@@ -8,11 +8,5 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
-  },
-  "pnpm": {
-    "workspaces": [
-      "apps/*",
-      "packages/*"
-    ]
   }
 }
