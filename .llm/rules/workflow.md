@@ -1,0 +1,69 @@
+---
+description: Development workflow loop. Plan depth scales with task complexity.
+alwaysApply: true
+---
+
+# Workflow Loop
+
+One loop for all tasks. Plan depth scales with complexity — a simple fix needs 2-3 lines; a multi-milestone feature needs full breakdown.
+
+## 1. Plan
+
+- Gather context: read existing code, related files — verify theory before making claims
+- Describe the solution; for complex tasks — add non-goals, milestones, acceptance criteria
+- **Self-validate**: are all edge cases covered? are all claims grounded in actual code?
+- For complex tasks — document key decisions: what was chosen vs. rejected and why
+- **Get approval: wait for user confirmation before implementing**
+- Use `/plan` for medium/complex tasks to produce a structured plan
+
+## 2. Implement
+
+- For complex tasks: complete **one atomic step at a time** — one task from the plan, one logical unit
+- After each atomic step: verify it works → report to user → **STOP**
+- **Never chain multiple steps automatically** — next step starts only on explicit user instruction
+- Keep changes focused and atomic
+
+## 3. Verify
+
+- Run `/verify` on changed files
+- Confirm the plan step is fully realized — nothing skipped
+- Quick self-check: architecture, naming conventions, edge cases
+- If new findings affect the solution — address them before moving on
+
+## 4. Fix
+
+- Address failures immediately — don't defer to later steps
+
+_(Repeat 2–4 for each milestone)_
+
+---
+
+**After all work is complete:**
+
+- Run `/review` on all changed files
+- Fix any issues found
+- Update docs if architecture/patterns/logic changed
+- Suggest running `/commit` — wait for user to invoke it explicitly
+- **NEVER autonomously run**: `git commit`, `git push`, `git rebase`, `git reset`, `git merge`, `git checkout`
+- **NEVER open a PR** without explicit user instruction
+
+---
+
+## Scaling Guide
+
+| Task size | Plan | Milestones | Progress tracking |
+|---|---|---|---|
+| Simple (1 step) | 2–3 lines | — | — |
+| Medium (2–3 steps) | Solution + non-goals | 2–3 explicit | — |
+| Complex (3+ steps) | Full breakdown + decisions | Each with scope | Externalized log |
+
+### Externalized Progress (complex tasks)
+
+For long tasks, maintain a progress section in the plan that survives `/compact`:
+
+- Completed milestones (one-liner each)
+- Current milestone and remaining work
+- Key decisions made
+- Known issues to address later
+
+Update after each milestone — this acts as durable memory the agent re-reads to stay oriented.
