@@ -77,6 +77,15 @@ _(Repeat 2–4 for each milestone)_
 - **NEVER autonomously run**: `git commit`, `git push`, `git rebase`, `git reset`, `git merge`, `git checkout`
 - **NEVER open a PR** without explicit user instruction
 
+## End of Session
+
+Before ending any session, update `memory/MEMORY.md`:
+1. Update `## ▶ Next Session Start` with current branch, what was done, and a ready-to-paste prompt
+2. Update `## Roadmap` to reflect completed items
+3. Update `## Known Gotchas` if new issues/solutions were found
+
+The next session prompt should be self-contained: branch name + what's done + what to do next.
+
 ---
 
 ## Scaling Guide
