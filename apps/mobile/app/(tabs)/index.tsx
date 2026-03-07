@@ -2,8 +2,8 @@ import { Text, View } from 'react-native';
 
 export default function DropsScreen() {
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Дропы</Text>
+    <View className="flex-1 items-center justify-center bg-white">
+      <Text className="text-2xl font-bold text-gray-900">Дропы</Text>
     </View>
   );
 }
