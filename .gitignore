@@ -1,5 +1,7 @@
 # Personal Claude overrides
 CLAUDE.local.md
+.claude/settings.local.json
+memory/
 
 # Dependencies
 node_modules/
