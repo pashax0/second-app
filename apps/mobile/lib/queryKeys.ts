@@ -1,0 +1,9 @@
+export const queryKeys = {
+  drops: {
+    active: () => ['drops', 'active'] as const,
+    list: () => ['drops', 'list'] as const,
+  },
+  profile: {
+    me: () => ['profile', 'me'] as const,
+  },
+};
