@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, useWindowDimensions, View, ViewToken } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useActiveDrop, type DropItem, type Measurements } from '../../hooks/useActiveDrop';
+import { useDrop } from '../../hooks/useDrop';
 
 function formatMeasurements(m: Measurements | null): string {
   if (!m) return '';
@@ -14,11 +15,15 @@ function formatMeasurements(m: Measurements | null): string {
 }
 
 export default function ItemScreen() {
-  const { index } = useLocalSearchParams<{ index: string }>();
+  const { index, dropId } = useLocalSearchParams<{ index: string; dropId: string }>();
   const { width } = useWindowDimensions();
-  const { data: drop } = useActiveDrop();
-  const listRef = useRef<FlatList>(null);
+  const { data: activeDrop } = useActiveDrop();
+  const isArchived = !!dropId && dropId !== activeDrop?.id;
+  const { data: archivedDrop } = useDrop(isArchived ? dropId : '');
 
+  const drop = isArchived ? archivedDrop : activeDrop;
+
+  const listRef = useRef<FlatList>(null);
   const initialIndex = parseInt(index ?? '0', 10);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
