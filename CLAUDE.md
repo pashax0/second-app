@@ -64,3 +64,8 @@ See [docs/architecture.md](docs/architecture.md) for details.
 @.llm/rules/testing.md
 @.llm/rules/workflow.md
 @.llm/rules/react-native.md
+
+## Context
+
+@.llm/context/business.md
+@.llm/context/ux.md
