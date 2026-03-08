@@ -1,28 +1,67 @@
 # Daily Drop Shop
 
-Мобильное приложение (iOS + Android) — интернет-магазин со штучными товарами.
+Мобильное приложение (iOS + Android) — секонд-хенд магазин одежды с ежедневными дропами.
+Каждая вещь уникальна. Дропы выходят раз в день — опоздал, не успел.
 
-Главная фишка: **ежедневные дропы** — товары выкладываются раз в день в настраиваемое время, ограниченным количеством. Пользователи получают push-уведомления о новых дропах. Непроданные товары доступны в архиве с фильтрами.
+## Быстрый старт
 
-## Getting started
+### 1. Зависимости
 
 ```bash
-# Install
 pnpm install
+```
 
-# Dev (mobile)
+### 2. Переменные окружения
+
+```bash
+cp apps/mobile/.env.example apps/mobile/.env
+# Заполнить EXPO_PUBLIC_SUPABASE_URL и EXPO_PUBLIC_SUPABASE_ANON_KEY
+```
+
+### 3. Supabase (локально)
+
+```bash
+# Запустить локальный Supabase (Docker должен быть запущен)
+pnpm supabase start
+
+# Применить миграции и seed-данные
+pnpm supabase db reset
+```
+
+После `db reset` доступны:
+- Studio: http://127.0.0.1:54323
+- API URL: http://127.0.0.1:54321
+- Тестовый юзер: `test@test.test` / `test123`
+
+### 4. Запуск приложения
+
+```bash
+# Web (основной режим разработки)
+pnpm --filter mobile web -- --clear
+
+# iOS / Android (требует нативной сборки через EAS)
 pnpm --filter mobile start
 ```
 
-## Development
+> SDK 55 несовместим с Expo Go — разработка ведётся в web-режиме.
+
+## Команды
 
 ```bash
-# Tests:     pnpm --filter mobile test
-# Lint:      pnpm --filter mobile lint
-# Typecheck: pnpm --filter mobile typecheck
-# Build:     pnpm --filter mobile build
+pnpm --filter mobile typecheck   # TypeScript
+pnpm --filter mobile lint        # ESLint
+pnpm --filter mobile test        # Jest
+pnpm --filter mobile build       # EAS Build
 ```
 
-## Architecture
+## Supabase
 
-See [docs/architecture.md](docs/architecture.md) and [docs/decisions/](docs/decisions/).
+```bash
+pnpm supabase start    # запустить
+pnpm supabase stop     # остановить
+pnpm supabase db reset # сбросить БД + применить миграции + seed
+```
+
+## Архитектура
+
+См. [docs/architecture.md](docs/architecture.md) и [docs/decisions/](docs/decisions/).

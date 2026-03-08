@@ -72,8 +72,13 @@ _(Repeat 2–4 for each milestone)_
 
 - Run `/review` on all changed files
 - Fix any issues found
-- Update docs if architecture/patterns/logic changed
-- Suggest running `/commit` — wait for user to invoke it explicitly
+- **Docs & data checklist** — update each file that is now out of date:
+  - `CLAUDE.md` — if commands, stack, or project description changed
+  - `docs/architecture.md` — if folder structure, screens, or data flow changed
+  - `README.md` — if setup or run instructions changed
+  - `supabase/migrations/*_seed*` / `supabase/seed.sql` — if domain model or test data is now inconsistent with reality
+- **Before writing git commands**: check `.gitignore` (never stage ignored files); use `git add <dir>/` instead of listing individual paths with `()` to avoid bash syntax errors
+- Provide git commands as a single readable multi-line block using `\` continuation
 - **NEVER autonomously run**: `git commit`, `git push`, `git rebase`, `git reset`, `git merge`, `git checkout`
 - **NEVER open a PR** without explicit user instruction
 

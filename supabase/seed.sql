@@ -30,3 +30,14 @@ insert into auth.users (
   '',
   ''
 ) on conflict (id) do nothing;
+
+-- Profile pre-filled so checkout form is ready without manual input
+insert into public.profiles (id, name, phone, address) values (
+  'cccccccc-0000-0000-0000-000000000001',
+  'Алексей Тестовый',
+  '+7 916 000 00 01',
+  'Москва, ул. Арбат, д. 1, кв. 42'
+) on conflict (id) do update set
+  name    = excluded.name,
+  phone   = excluded.phone,
+  address = excluded.address;

@@ -1,14 +1,14 @@
 # Daily Drop Shop
 
-Мобильное приложение (iOS + Android) — интернет-магазин со штучными товарами.
-Главная фишка: ежедневные дропы — товары выкладываются раз в день в настраиваемое время, ограниченным количеством. Непроданные товары доступны в архиве с фильтрами.
+Мобильное приложение (iOS + Android) — секонд-хенд магазин одежды с ежедневными дропами.
+Каждая вещь уникальна. Оплата при получении (наложенный платёж).
 
 ## Tech Stack
 
 - Language: TypeScript
-- Runtime: Expo (managed workflow) + React Native
-- Navigation: Expo Router (file-based)
-- Styling: NativeWind (Tailwind CSS for RN)
+- Runtime: Expo SDK 55 (managed workflow) + React Native
+- Navigation: Expo Router ~55.0.4 (file-based)
+- Styling: NativeWind v4 (Tailwind CSS v3 для RN)
 - Server state: TanStack Query
 - Client state: Zustand
 - Forms: React Hook Form + Zod
@@ -21,8 +21,8 @@
 # Install
 pnpm install
 
-# Dev (mobile)
-pnpm --filter mobile start
+# Dev (web — основной режим разработки, SDK 55 несовместим с Expo Go)
+pnpm --filter mobile web -- --clear
 
 # Build
 pnpm --filter mobile build
@@ -35,6 +35,11 @@ pnpm --filter mobile lint
 
 # Type check
 pnpm --filter mobile typecheck
+
+# Supabase
+pnpm supabase start       # запустить локально
+pnpm supabase stop        # остановить
+pnpm supabase db reset    # сбросить БД + миграции + seed
 ```
 
 ## Architecture
@@ -59,3 +64,8 @@ See [docs/architecture.md](docs/architecture.md) for details.
 @.llm/rules/testing.md
 @.llm/rules/workflow.md
 @.llm/rules/react-native.md
+
+## Context
+
+@.llm/context/business.md
+@.llm/context/ux.md

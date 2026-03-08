@@ -45,31 +45,31 @@ Daily Drop Shop — секонд-хенд магазин одежды. Monorepo 
 apps/
   mobile/
     app/                  # Expo Router screens (file-based routing)
-      (auth)/             # Auth screens (login, register)
+      (auth)/             # Auth screens
+        sign-in.tsx
+        sign-up.tsx
       (tabs)/             # Main tab navigation
         index.tsx         # Сегодняшний дроп
-        archive.tsx       # Архив товаров
-        favorites.tsx     # Избранное
-        profile.tsx       # Профиль
-      product/[id].tsx    # Страница товара
-      _layout.tsx         # Root layout (notifications, auth guard)
-    components/           # Переиспользуемые компоненты
+        archive.tsx       # Архив дропов
+        profile.tsx       # Профиль + выход
+      checkout.tsx        # Оформление заказа (modal)
+      my-orders.tsx       # История заказов
+      _layout.tsx         # Root layout (auth guard)
     lib/
       supabase.ts         # Supabase client
       queryKeys.ts        # TanStack Query keys
-    hooks/                # Custom React hooks
-    store/                # Zustand stores
+    hooks/
+      useActiveDrop.ts    # Активный дроп с товарами
+    stores/
+      auth.ts             # Zustand: сессия пользователя
 
 packages/
-  shared/
-    types/                # TypeScript типы (Product, Order, User...)
-    schemas/              # Zod schemas (валидация)
+  shared/                 # placeholder
 
 supabase/
   migrations/             # SQL миграции (версионированные)
-  functions/              # Edge Functions
-    schedule-drop/        # Запуск нового дропа по расписанию
-    send-notifications/   # Push-уведомления при дропе
+  seed.sql                # Dev seed: тестовый юзер (запускается при db reset)
+  functions/              # Edge Functions (запланировано)
 ```
 
 ## Key Decisions
@@ -100,7 +100,7 @@ Mobile App → TanStack Query → Supabase REST API → PostgreSQL
 ### Аутентификация
 
 ```
-Mobile App → Supabase Auth (Google / Apple / Email)
+Mobile App → Supabase Auth (Email/Password)
   → JWT session → хранится в SecureStore
   → автообновление через Supabase JS client
 ```
