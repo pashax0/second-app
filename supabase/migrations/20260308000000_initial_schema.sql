@@ -14,6 +14,11 @@ create table public.products (
   id              uuid primary key default gen_random_uuid(),
   name            text not null,
   description     text,
+  brand           text,
+  country         text,
+  size            text,
+  measurements    jsonb,          -- {"chest":50,"waist":null,"hips":null,"length":70}
+  item_number     text,           -- internal shop number, e.g. "202"
   price           numeric(10,2) not null,
   stock_quantity  int not null default 0,
   created_at      timestamptz not null default now(),
@@ -35,6 +40,7 @@ create index on public.product_images (product_id, position);
 create table public.drops (
   id            uuid primary key default gen_random_uuid(),
   title         text,
+  description   text,           -- optional header shown above the item grid
   scheduled_at  timestamptz not null,
   published_at  timestamptz,
   -- draft → active → archived
@@ -50,7 +56,8 @@ create table public.drop_items (
   drop_id         uuid not null references public.drops(id) on delete cascade,
   product_id      uuid not null references public.products(id),
   quantity        int not null default 1,
-  override_price  numeric(10,2),  -- nullable; enables strikethrough pricing in future
+  position        int not null default 0,  -- display order in the grid
+  override_price  numeric(10,2),           -- nullable; enables strikethrough pricing in future
   created_at      timestamptz not null default now(),
   unique (drop_id, product_id)
 );

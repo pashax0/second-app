@@ -1,133 +1,157 @@
--- Dev seed data: 3 drops (2 archived, 1 active) with 10 unique secondhand clothing items
--- This migration is safe to run multiple times (uses fixed UUIDs + do update)
--- Domain: each item is unique, stock_quantity=1; sold-out items kept for FOMO/archive
+-- Dev seed: 3 drops with real secondhand clothing items from Instagram posts
+-- Uses fixed UUIDs + do update so safe to run on every db reset
 
 -- ── Products ────────────────────────────────────────────────────────────────
+-- Drop #1 items (4 шт, все проданы кроме одного — FOMO в архиве)
 
-insert into public.products (id, name, description, price, stock_quantity) values
-  -- Drop #1 (archived, 2 weeks ago)
+insert into public.products (id, name, brand, country, size, measurements, item_number, price, stock_quantity) values
   (
     '11111111-0000-0000-0000-000000000001',
-    'Куртка Levi''s vintage 90-х, M',
-    'Джинсовая куртка, плотная ткань, лёгкий износ — это история, не дефект.',
-    3200.00,
-    0  -- sold out
+    'Флисовая курточка',
+    'Regatta', 'England', 'M',
+    '{"chest":50,"length":70}',
+    '202', 1990.00, 0
   ),
   (
     '11111111-0000-0000-0000-000000000002',
-    'Шерстяное пальто Zara, S',
-    'Бежевое пальто-кокон, 70% шерсть. Состояние отличное, без катышков.',
-    4500.00,
-    0  -- sold out
+    'Свитшот оверсайз',
+    'George', 'England', 'L',
+    '{"chest":60,"length":65}',
+    '54', 1990.00, 0
   ),
   (
     '11111111-0000-0000-0000-000000000003',
-    'Хлопковый свитер оверсайз, L',
-    'Мягкий крупной вязки, тёмно-зелёный. Носили один сезон.',
-    1800.00,
-    0  -- sold out
+    'Брюки классические',
+    'YOURS', 'England', 'XL',
+    '{"waist":50,"hips":60,"length":110}',
+    '331', 1990.00, 0
   ),
-  -- Drop #2 (archived, 1 week ago)
   (
     '11111111-0000-0000-0000-000000000004',
-    'Ветровка Columbia, XL',
-    'Лёгкая непромокаемая ветровка, синяя. Швы проклеены, все молнии целы.',
-    2900.00,
-    0  -- sold out
+    'Спортивные брюки',
+    'M&S', 'England', 'L',
+    '{"waist":42,"hips":50,"length":90}',
+    '43', 1990.00, 1  -- не продали, можно купить из архива
   ),
+
+-- Drop #2 items (PLT — 4 шт, большинство продано)
+
   (
     '11111111-0000-0000-0000-000000000005',
-    'Льняные брюки прямые, M',
-    '100% лён, молочный цвет. Стрелки, высокая посадка.',
-    2100.00,
-    0  -- sold out
+    'Блуза',
+    'Pretty Little Thing', 'England', 'XS',
+    '{"chest":42,"length":50}',
+    '143', 2990.00, 0
   ),
   (
     '11111111-0000-0000-0000-000000000006',
-    'Платье миди H&M Conscious, S',
-    'Вискоза, принт в мелкий цветок. Состояние: отличное, без пятен.',
-    1600.00,
-    1
+    'Свитшот на флисе оверсайз',
+    'Pretty Little Thing', 'England', 'S',
+    '{"chest":55,"length":70}',
+    '146', 2990.00, 0
   ),
   (
     '11111111-0000-0000-0000-000000000007',
-    'Кожаный ремень Massimo Dutti',
-    'Натуральная кожа, коричневый, ширина 3 см. Практически не использовался.',
-    900.00,
-    0  -- sold out
+    'Удлинённая худи на флисе оверсайз',
+    'Pretty Little Thing', 'England', '3XL',
+    '{"chest":80,"length":100}',
+    '148', 2990.00, 1  -- осталась
   ),
-  -- Drop #3 (active — сегодня)
   (
     '11111111-0000-0000-0000-000000000008',
-    'Пуховик Uniqlo Ultra Light, M',
-    'Ультралёгкий, чёрный, складывается в карман. Один сезон носки.',
-    5200.00,
-    1
+    'Джинсы',
+    'Pretty Little Thing', 'England', 'L',
+    '{"waist":40,"hips":50,"length":120}',
+    '177', 2990.00, 0
   ),
+
+-- Drop #3 items (активный, 4 шт — 1 продана для FOMO)
+
   (
     '11111111-0000-0000-0000-000000000009',
-    'Джинсы Weekday, 28/32',
-    'Прямой крой, светло-серый деним. Фирменная бирка на месте.',
-    2400.00,
-    0  -- sold out for FOMO
+    'Рубашка оверсайз',
+    'Primark', 'England', 'L',
+    '{"chest":70,"length":85}',
+    '35', 1990.00, 1
   ),
   (
     '11111111-0000-0000-0000-000000000010',
-    'Шёлковая блуза COS, XS',
-    '100% шёлк, пудровый розовый. Стирка деликатная, без дефектов.',
-    3100.00,
-    1
+    'Платье миди',
+    'Papaya', 'England', 'S',
+    '{"chest":44,"length":100}',
+    '77', 1990.00, 1
+  ),
+  (
+    '11111111-0000-0000-0000-000000000011',
+    'Куртка с подкладкой',
+    'Abercrombie & Fitch', 'USA', 'M/L',
+    '{"chest":50,"length":60}',
+    '168', 2990.00, 1
+  ),
+  (
+    '11111111-0000-0000-0000-000000000012',
+    'Куртка оверсайз',
+    'Crane', 'England', 'M',
+    '{"chest":60,"length":70}',
+    '46', 1990.00, 0  -- продана, FOMO
   )
 on conflict (id) do update set
-  name          = excluded.name,
-  description   = excluded.description,
-  price         = excluded.price,
+  name         = excluded.name,
+  brand        = excluded.brand,
+  country      = excluded.country,
+  size         = excluded.size,
+  measurements = excluded.measurements,
+  item_number  = excluded.item_number,
+  price        = excluded.price,
   stock_quantity = excluded.stock_quantity;
 
 -- ── Drops ───────────────────────────────────────────────────────────────────
 
-insert into public.drops (id, title, scheduled_at, published_at, status) values
+insert into public.drops (id, description, scheduled_at, published_at, status) values
   (
     'aaaaaaaa-0000-0000-0000-000000000001',
-    'Дроп #1 — Зима 2026',
+    null,
     now() - interval '14 days',
     now() - interval '14 days',
     'archived'
   ),
   (
     'aaaaaaaa-0000-0000-0000-000000000002',
-    'Дроп #2 — Февраль 2026',
+    'Сток от крутого английского бренда Pretty Little Thing London ❤️',
     now() - interval '7 days',
     now() - interval '7 days',
     'archived'
   ),
   (
     'aaaaaaaa-0000-0000-0000-000000000003',
-    'Дроп #3 — Весна 2026',
+    null,
     now(),
     now(),
     'active'
   )
 on conflict (id) do update set
-  title       = excluded.title,
+  description  = excluded.description,
   scheduled_at = excluded.scheduled_at,
   published_at = excluded.published_at,
-  status      = excluded.status;
+  status       = excluded.status;
 
 -- ── Drop items ──────────────────────────────────────────────────────────────
 
-insert into public.drop_items (drop_id, product_id, quantity, override_price) values
+insert into public.drop_items (drop_id, product_id, quantity, position, override_price) values
   -- Drop #1
-  ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', 1, null),
-  ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000002', 1, null),
-  ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000003', 1, null),
+  ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', 1, 1, null),
+  ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000002', 1, 2, null),
+  ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000003', 1, 3, null),
+  ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000004', 1, 4, null),
   -- Drop #2
-  ('aaaaaaaa-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000004', 1, null),
-  ('aaaaaaaa-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000005', 1, null),
-  ('aaaaaaaa-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000006', 1, null),
-  ('aaaaaaaa-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000007', 1, null),
+  ('aaaaaaaa-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000005', 1, 1, null),
+  ('aaaaaaaa-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000006', 1, 2, null),
+  ('aaaaaaaa-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000007', 1, 3, null),
+  ('aaaaaaaa-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000008', 1, 4, null),
   -- Drop #3 (active)
-  ('aaaaaaaa-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000008', 1, null),
-  ('aaaaaaaa-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000009', 1, null),
-  ('aaaaaaaa-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000010', 1, null)
-on conflict (drop_id, product_id) do nothing;
+  ('aaaaaaaa-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000009', 1, 1, null),
+  ('aaaaaaaa-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000010', 1, 2, null),
+  ('aaaaaaaa-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000011', 1, 3, null),
+  ('aaaaaaaa-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000012', 1, 4, null)
+on conflict (drop_id, product_id) do update set
+  position = excluded.position;
