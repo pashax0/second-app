@@ -40,6 +40,7 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="checkout" options={{ presentation: 'modal', title: 'Оформление заказа' }} />
           <Stack.Screen name="my-orders" options={{ title: 'Мои заказы' }} />
+          <Stack.Screen name="item/[id]" options={{ title: '' }} />
         </Stack>
       </AuthGate>
     </QueryClientProvider>
