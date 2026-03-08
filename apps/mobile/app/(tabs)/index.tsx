@@ -1,4 +1,5 @@
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { useActiveDrop, type DropItem } from '../../hooks/useActiveDrop';
 
@@ -49,7 +50,7 @@ export default function DropsScreen() {
           data={drop.drop_items}
           keyExtractor={(item) => item.id}
           scrollEnabled={false}
-          renderItem={({ item }) => <DropItemCard item={item} />}
+          renderItem={({ item }) => <DropItemCard item={item} dropId={drop.id} />}
           ItemSeparatorComponent={() => <View className="h-px bg-gray-100 mx-4" />}
         />
       </ScrollView>
@@ -57,7 +58,7 @@ export default function DropsScreen() {
   );
 }
 
-function DropItemCard({ item }: { item: DropItem }) {
+function DropItemCard({ item, dropId }: { item: DropItem; dropId: string }) {
   const { product, override_price } = item;
   const displayPrice = override_price ?? product.price;
   const isSoldOut = product.stock_quantity === 0;
@@ -91,23 +92,24 @@ function DropItemCard({ item }: { item: DropItem }) {
         </View>
       </View>
 
-      <View className="flex-row items-center justify-between mt-3">
+      <View className="flex-row items-center justify-end mt-3">
         {isSoldOut ? (
-          <View className="bg-gray-200 rounded-full px-3 py-1">
-            <Text className="text-xs font-medium text-gray-600">Распродано</Text>
+          <View className="bg-gray-200 rounded-full px-5 py-2">
+            <Text className="text-sm font-semibold text-gray-400">Уже забрали</Text>
           </View>
         ) : (
-          <Text className="text-xs text-gray-500">Осталось: {product.stock_quantity} шт.</Text>
+          <Pressable
+            className="bg-gray-900 px-5 py-2 rounded-full"
+            onPress={() =>
+              router.push({
+                pathname: '/checkout',
+                params: { dropId, productId: product.id },
+              })
+            }
+          >
+            <Text className="text-sm font-semibold text-white">Купить</Text>
+          </Pressable>
         )}
-
-        <Pressable
-          disabled={isSoldOut}
-          className={`px-5 py-2 rounded-full ${isSoldOut ? 'bg-gray-200' : 'bg-gray-900'}`}
-        >
-          <Text className={`text-sm font-semibold ${isSoldOut ? 'text-gray-400' : 'text-white'}`}>
-            {isSoldOut ? 'Нет в наличии' : 'Купить'}
-          </Text>
-        </Pressable>
       </View>
     </View>
   );
