@@ -6,4 +6,7 @@ export const queryKeys = {
   profile: {
     me: () => ['profile', 'me'] as const,
   },
+  orders: {
+    my: () => ['orders', 'my'] as const,
+  },
 };

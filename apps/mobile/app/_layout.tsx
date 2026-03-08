@@ -3,7 +3,6 @@ import { useEffect } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/auth'
-import { supabase } from '../lib/supabase'
 
 const queryClient = new QueryClient()
 
@@ -40,6 +39,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="checkout" options={{ presentation: 'modal', title: 'Оформление заказа' }} />
+          <Stack.Screen name="my-orders" options={{ title: 'Мои заказы' }} />
         </Stack>
       </AuthGate>
     </QueryClientProvider>
