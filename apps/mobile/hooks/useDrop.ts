@@ -24,7 +24,11 @@ const DROP_SELECT = `
       measurements,
       item_number,
       price,
-      stock_quantity
+      stock_quantity,
+      images:product_images (
+        url,
+        position
+      )
     )
   )
 `;

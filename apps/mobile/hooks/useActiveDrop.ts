@@ -9,6 +9,11 @@ export type Measurements = {
   length?: number | null;
 };
 
+export type ProductImage = {
+  url: string;
+  position: number;
+};
+
 export type DropProduct = {
   id: string;
   name: string;
@@ -20,6 +25,7 @@ export type DropProduct = {
   item_number: string | null;
   price: number;
   stock_quantity: number;
+  images: ProductImage[];
 };
 
 export type DropItem = {
@@ -63,7 +69,11 @@ async function fetchActiveDrop(): Promise<ActiveDrop | null> {
           measurements,
           item_number,
           price,
-          stock_quantity
+          stock_quantity,
+          images:product_images (
+            url,
+            position
+          )
         )
       )
     `)
