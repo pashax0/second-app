@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { FlatList, Pressable, Text, useWindowDimensions, View, ViewToken } from 'react-native';
+import { FlatList, Image, Pressable, Text, useWindowDimensions, View, ViewToken } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useActiveDrop, type DropItem, type Measurements } from '../../hooks/useActiveDrop';
 import { useDrop } from '../../hooks/useDrop';
@@ -83,13 +83,16 @@ function ItemCard({
 
   return (
     <View style={{ width }} className="flex-1">
-      {/* Photo placeholder */}
-      <View
-        className="bg-gray-100 items-center justify-center"
-        style={{ width, aspectRatio: 1 }}
-      >
-        <Text className="text-gray-400">Фото</Text>
-      </View>
+      {/* Photo */}
+      {product.images[0]?.url ? (
+        <Image
+          source={{ uri: product.images[0].url }}
+          style={{ width, aspectRatio: 1 }}
+          resizeMode="cover"
+        />
+      ) : (
+        <View className="bg-gray-100" style={{ width, aspectRatio: 1 }} />
+      )}
 
       {/* Info */}
       <View className="px-4 pt-4 pb-8">

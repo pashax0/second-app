@@ -155,3 +155,21 @@ insert into public.drop_items (drop_id, product_id, quantity, position, override
   ('aaaaaaaa-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000012', 1, 4, null)
 on conflict (drop_id, product_id) do update set
   position = excluded.position;
+
+-- ── Product images ───────────────────────────────────────────────────────────
+-- 1 фото на товар, picsum.photos seed = фиксированный per-product (детерминировано)
+
+insert into public.product_images (product_id, url, position) values
+  ('11111111-0000-0000-0000-000000000001', 'https://picsum.photos/seed/item001/800/800', 1),
+  ('11111111-0000-0000-0000-000000000002', 'https://picsum.photos/seed/item002/800/800', 1),
+  ('11111111-0000-0000-0000-000000000003', 'https://picsum.photos/seed/item003/800/800', 1),
+  ('11111111-0000-0000-0000-000000000004', 'https://picsum.photos/seed/item004/800/800', 1),
+  ('11111111-0000-0000-0000-000000000005', 'https://picsum.photos/seed/item005/800/800', 1),
+  ('11111111-0000-0000-0000-000000000006', 'https://picsum.photos/seed/item006/800/800', 1),
+  ('11111111-0000-0000-0000-000000000007', 'https://picsum.photos/seed/item007/800/800', 1),
+  ('11111111-0000-0000-0000-000000000008', 'https://picsum.photos/seed/item008/800/800', 1),
+  ('11111111-0000-0000-0000-000000000009', 'https://picsum.photos/seed/item009/800/800', 1),
+  ('11111111-0000-0000-0000-000000000010', 'https://picsum.photos/seed/item010/800/800', 1),
+  ('11111111-0000-0000-0000-000000000011', 'https://picsum.photos/seed/item011/800/800', 1),
+  ('11111111-0000-0000-0000-000000000012', 'https://picsum.photos/seed/item012/800/800', 1)
+;

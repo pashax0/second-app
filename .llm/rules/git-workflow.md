@@ -7,10 +7,16 @@ alwaysApply: true
 
 ## Branches
 
-- `main` — production-ready only, always deployable
-- `feat/<name>` — new features
-- `fix/<name>` — bug fixes
-- `chore/<name>` — tooling, deps, refactor, docs
+- `master` — production-ready only, always deployable
+- `p0NN_<name>` — feature branches, numbered sequentially (p011_archive, p012_images, …)
+
+## Feature completion — ALWAYS in this order
+
+1. `git commit` on feature branch
+2. Ask user: merge to master?
+3. After approval: `git checkout master && git merge --no-ff <branch> -m "..."`
+4. Immediately after merge: `git checkout -b p0NN_next` — create next feature branch
+5. Only after the new branch exists: update `▶ Next Session Start` in memory with the new branch name
 
 ## Commits — Conventional Commits
 

@@ -1,4 +1,4 @@
-import { ActivityIndicator, Dimensions, FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, Image, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useActiveDrop, type DropItem } from '../../hooks/useActiveDrop';
 
@@ -61,6 +61,7 @@ export default function DropsScreen() {
 
 function GridCell({ item, index, dropId }: { item: DropItem; index: number; dropId: string }) {
   const isSoldOut = item.product.stock_quantity === 0;
+  const imageUrl = item.product.images[0]?.url;
 
   return (
     <Pressable
@@ -69,9 +70,15 @@ function GridCell({ item, index, dropId }: { item: DropItem; index: number; drop
         router.push({ pathname: '/item/[id]', params: { id: item.product.id, dropId, index } })
       }
     >
-      <View className="flex-1 bg-gray-100 items-center justify-center">
-        <Text className="text-gray-400 text-xs">Фото</Text>
-      </View>
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={{ width: CELL_SIZE, height: CELL_SIZE }}
+          resizeMode="cover"
+        />
+      ) : (
+        <View className="flex-1 bg-gray-100" />
+      )}
       {isSoldOut && (
         <View
           className="absolute items-center justify-center bg-white/70"
