@@ -4,8 +4,19 @@ alter table public.products enable row level security;
 alter table public.product_images enable row level security;
 alter table public.drops enable row level security;
 alter table public.drop_items enable row level security;
+alter table public.reservations enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
+
+-- Helper: is the current user an admin?
+-- Used in policies to avoid repeating the subquery.
+create or replace function public.is_admin()
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and is_admin = true
+  )
+$$;
 
 -- profiles: users can read/update their own profile only
 create policy "profiles: own read" on public.profiles
@@ -14,7 +25,7 @@ create policy "profiles: own read" on public.profiles
 create policy "profiles: own update" on public.profiles
   for update using (auth.uid() = id);
 
--- products: public read; admin write
+-- products: public read; authenticated write (admin only in practice)
 create policy "products: public read" on public.products
   for select using (true);
 
@@ -63,15 +74,31 @@ create policy "drop_items: authenticated insert" on public.drop_items
 create policy "drop_items: authenticated delete" on public.drop_items
   for delete using (auth.role() = 'authenticated');
 
--- orders: users can read their own orders
+-- reservations: anyone can see non-expired ones (to show timer on storefront)
+create policy "reservations: public read active" on public.reservations
+  for select using (expires_at > now());
+
+-- admin can see all reservations (including expired)
+create policy "reservations: admin read all" on public.reservations
+  for select using (public.is_admin());
+
+create policy "reservations: own insert" on public.reservations
+  for insert with check (auth.uid() = user_id);
+
+create policy "reservations: own delete" on public.reservations
+  for delete using (auth.uid() = user_id);
+
+-- orders: users can read their own; admin reads all
 create policy "orders: own read" on public.orders
   for select using (auth.uid() = user_id);
 
--- orders: authenticated users can insert
+create policy "orders: admin read all" on public.orders
+  for select using (public.is_admin());
+
 create policy "orders: authenticated insert" on public.orders
   for insert with check (auth.uid() = user_id);
 
--- order_items: users can read their own order items (via order)
+-- order_items: users can read their own (via order); admin reads all
 create policy "order_items: own read" on public.order_items
   for select using (
     exists (
@@ -81,7 +108,9 @@ create policy "order_items: own read" on public.order_items
     )
   );
 
--- order_items: authenticated insert
+create policy "order_items: admin read all" on public.order_items
+  for select using (public.is_admin());
+
 create policy "order_items: authenticated insert" on public.order_items
   for insert with check (
     exists (

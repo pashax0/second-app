@@ -14,7 +14,7 @@ interface Product {
   brand: string | null
   size: string | null
   price: number
-  status: 'draft' | 'active' | 'sold'
+  status: 'draft' | 'available' | 'sold'
   product_images: ProductImage[]
 }
 
@@ -35,13 +35,13 @@ async function deleteProduct(id: string) {
 
 const STATUS_LABEL: Record<Product['status'], string> = {
   draft: 'Draft',
-  active: 'Active',
+  available: 'Available',
   sold: 'Sold',
 }
 
 const STATUS_CLS: Record<Product['status'], string> = {
   draft: 'bg-gray-100 text-gray-600',
-  active: 'bg-green-100 text-green-700',
+  available: 'bg-green-100 text-green-700',
   sold: 'bg-red-100 text-red-600',
 }
 
