@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Products from './pages/Products'
+import CreateProduct from './pages/CreateProduct'
 import Drops from './pages/Drops'
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
             }
           >
             <Route path="/products" element={<Products />} />
+            <Route path="/products/new" element={<CreateProduct />} />
             <Route path="/drops" element={<Drops />} />
           </Route>
           <Route path="*" element={<Navigate to="/products" replace />} />
