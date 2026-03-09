@@ -1,15 +1,13 @@
-import { ActivityIndicator, Dimensions, FlatList, Image, Pressable, Text, View } from 'react-native';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useDrop } from '../../hooks/useDrop';
-import type { DropItem } from '../../hooks/useActiveDrop';
-
-const COLS = 3;
-const GAP = 1;
-const CELL_SIZE = (Dimensions.get('window').width - GAP * (COLS - 1)) / COLS;
+import { ActivityIndicator, FlatList, Image, Pressable, Text, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useDrop } from '../../../hooks/useDrop';
+import { usePhotoGrid } from '../../../lib/grid';
+import type { DropItem } from '../../../hooks/useActiveDrop';
 
 export default function DropScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: drop, isLoading, error } = useDrop(id);
+  const { cols, cellSize, gap } = usePhotoGrid();
 
   if (isLoading) {
     return (
@@ -36,38 +34,46 @@ export default function DropScreen() {
   }
 
   return (
-    <>
-      <Stack.Screen options={{ title: drop.title ?? 'Дроп' }} />
-      <View className="flex-1 bg-white">
-        <FlatList
-          data={drop.drop_items}
-          keyExtractor={(item) => item.id}
-          numColumns={COLS}
-          columnWrapperStyle={{ gap: GAP }}
-          ItemSeparatorComponent={() => <View style={{ height: GAP }} />}
-          ListHeaderComponent={
-            drop.description ? (
-              <View className="px-4 py-3 border-b border-gray-100">
-                <Text className="text-sm text-gray-600">{drop.description}</Text>
-              </View>
-            ) : null
-          }
-          renderItem={({ item, index }) => (
-            <GridCell item={item} index={index} dropId={drop.id} />
-          )}
-        />
-      </View>
-    </>
+    <View className="flex-1 bg-white">
+      <FlatList
+        key={cols}
+        data={drop.drop_items}
+        keyExtractor={(item) => item.id}
+        numColumns={cols}
+        columnWrapperStyle={cols > 1 ? { gap } : undefined}
+        ItemSeparatorComponent={() => <View style={{ height: gap }} />}
+        ListHeaderComponent={
+          drop.description ? (
+            <View className="px-4 py-3 border-b border-gray-100">
+              <Text className="text-sm text-gray-600">{drop.description}</Text>
+            </View>
+          ) : null
+        }
+        renderItem={({ item, index }) => (
+          <GridCell item={item} index={index} dropId={drop.id} cellSize={cellSize} />
+        )}
+      />
+    </View>
   );
 }
 
-function GridCell({ item, index, dropId }: { item: DropItem; index: number; dropId: string }) {
+function GridCell({
+  item,
+  index,
+  dropId,
+  cellSize,
+}: {
+  item: DropItem;
+  index: number;
+  dropId: string;
+  cellSize: number;
+}) {
   const isSoldOut = item.product.stock_quantity === 0;
   const imageUrl = item.product.images[0]?.url;
 
   return (
     <Pressable
-      style={{ width: CELL_SIZE, height: CELL_SIZE }}
+      style={{ width: cellSize, height: cellSize }}
       onPress={() =>
         router.push({ pathname: '/item/[id]', params: { id: item.product.id, dropId, index } })
       }
@@ -75,7 +81,7 @@ function GridCell({ item, index, dropId }: { item: DropItem; index: number; drop
       {imageUrl ? (
         <Image
           source={{ uri: imageUrl }}
-          style={{ width: CELL_SIZE, height: CELL_SIZE }}
+          style={{ width: cellSize, height: cellSize }}
           resizeMode="cover"
         />
       ) : (

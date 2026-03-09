@@ -6,6 +6,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: 'Дропы' }} />
       <Tabs.Screen name="archive" options={{ title: 'Архив' }} />
       <Tabs.Screen name="profile" options={{ title: 'Я' }} />
+      <Tabs.Screen name="drop/[id]" options={{ href: null, title: 'Дроп' }} />
     </Tabs>
   );
 }
