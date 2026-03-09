@@ -21,6 +21,7 @@ create table public.products (
   item_number     text,           -- internal shop number, e.g. "202"
   price           numeric(10,2) not null,
   stock_quantity  int not null default 0,
+  status          text not null default 'draft' check (status in ('draft', 'active', 'sold')),
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -54,7 +55,7 @@ create table public.drops (
 create table public.drop_items (
   id              uuid primary key default gen_random_uuid(),
   drop_id         uuid not null references public.drops(id) on delete cascade,
-  product_id      uuid not null references public.products(id),
+  product_id      uuid not null references public.products(id) on delete cascade,
   quantity        int not null default 1,
   position        int not null default 0,  -- display order in the grid
   override_price  numeric(10,2),           -- nullable; enables strikethrough pricing in future
