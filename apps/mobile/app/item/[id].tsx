@@ -1,8 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
-import { FlatList, Image, Pressable, Text, useWindowDimensions, View, ViewToken } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Pressable, Text, useWindowDimensions, View, ViewToken } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useActiveDrop, type DropItem, type Measurements } from '../../hooks/useActiveDrop';
 import { useDrop } from '../../hooks/useDrop';
+import { useReservations, type Reservation } from '../../hooks/useReservations';
+import { useAddToCart, useRemoveFromCart } from '../../hooks/useCart';
+import { useAuthStore } from '../../stores/auth';
 
 function formatMeasurements(m: Measurements | null): string {
   if (!m) return '';
@@ -14,6 +17,35 @@ function formatMeasurements(m: Measurements | null): string {
   return parts.join(' · ');
 }
 
+function useCountdown(expiresAt: string | undefined): string {
+  const [label, setLabel] = useState('');
+
+  useEffect(() => {
+    if (!expiresAt) {
+      setLabel('');
+      return;
+    }
+
+    const tick = () => {
+      const ms = new Date(expiresAt).getTime() - Date.now();
+      if (ms <= 0) {
+        setLabel('');
+        return;
+      }
+      const totalSec = Math.ceil(ms / 1000);
+      const min = Math.floor(totalSec / 60);
+      const sec = totalSec % 60;
+      setLabel(`${min}:${String(sec).padStart(2, '0')}`);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  return label;
+}
+
 export default function ItemScreen() {
   const { index, dropId } = useLocalSearchParams<{ index: string; dropId: string }>();
   const { width } = useWindowDimensions();
@@ -22,6 +54,9 @@ export default function ItemScreen() {
   const { data: archivedDrop } = useDrop(isArchived ? dropId : '');
 
   const drop = isArchived ? archivedDrop : activeDrop;
+
+  const productIds = drop?.drop_items.map((i) => i.product.id) ?? [];
+  const { data: reservations } = useReservations(productIds);
 
   const listRef = useRef<FlatList>(null);
   const initialIndex = parseInt(index ?? '0', 10);
@@ -57,7 +92,15 @@ export default function ItemScreen() {
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
           renderItem={({ item, index: i }) => (
-            <ItemCard item={item} dropId={drop.id} width={width} position={i + 1} total={total} />
+            <ItemCard
+              item={item}
+              dropId={drop.id}
+              width={width}
+              position={i + 1}
+              total={total}
+              reservation={reservations?.get(item.product.id)}
+              isActive={!isArchived}
+            />
           )}
         />
       </View>
@@ -69,21 +112,31 @@ function ItemCard({
   item,
   dropId,
   width,
+  reservation,
+  isActive,
 }: {
   item: DropItem;
   dropId: string;
   width: number;
   position: number;
   total: number;
+  reservation: Reservation | undefined;
+  isActive: boolean;
 }) {
   const { product, override_price } = item;
   const displayPrice = override_price ?? product.price;
-  const isSoldOut = product.stock_quantity === 0;
   const measurements = formatMeasurements(product.measurements);
+  const { user } = useAuthStore();
+  const { mutate: addToCart, isPending: isAdding } = useAddToCart();
+  const { mutate: removeFromCart, isPending: isRemoving } = useRemoveFromCart();
+  const countdown = useCountdown(reservation?.expires_at);
+
+  const isSold = product.status === 'sold';
+  const isMyReservation = !!reservation && reservation.user_id === user?.id;
+  const isSomeoneElsesReservation = !!reservation && !isMyReservation;
 
   return (
     <View style={{ width }} className="flex-1">
-      {/* Photo */}
       {product.images[0]?.url ? (
         <Image
           source={{ uri: product.images[0].url }}
@@ -94,7 +147,6 @@ function ItemCard({
         <View className="bg-gray-100" style={{ width, aspectRatio: 1 }} />
       )}
 
-      {/* Info */}
       <View className="px-4 pt-4 pb-8">
         <Text className="text-xl font-bold text-gray-900">{product.name}</Text>
 
@@ -118,25 +170,115 @@ function ItemCard({
             {displayPrice.toLocaleString('ru-RU')} ₽
           </Text>
 
-          {isSoldOut ? (
-            <View className="bg-gray-100 rounded-full px-6 py-3">
-              <Text className="text-sm font-semibold text-gray-400">Продано</Text>
-            </View>
-          ) : (
-            <Pressable
-              className="bg-gray-900 rounded-full px-6 py-3"
-              onPress={() =>
-                router.push({
-                  pathname: '/checkout',
-                  params: { dropId, productId: product.id },
-                })
-              }
-            >
-              <Text className="text-sm font-semibold text-white">Купить</Text>
-            </Pressable>
-          )}
+          <ActionButton
+            isSold={isSold}
+            isActive={isActive}
+            isMyReservation={isMyReservation}
+            isSomeoneElsesReservation={isSomeoneElsesReservation}
+            countdown={countdown}
+            isAdding={isAdding}
+            isRemoving={isRemoving}
+            onAddToCart={() => addToCart({ productId: product.id, dropId })}
+            onRemoveFromCart={() => removeFromCart({ productId: product.id })}
+            onCheckout={() =>
+              router.push({ pathname: '/checkout', params: { dropId, productId: product.id } })
+            }
+          />
         </View>
+
+        {/* Cancel button shown separately below when it's my reservation */}
+        {isMyReservation && (
+          <Pressable
+            className="mt-3 items-center py-2"
+            onPress={() => removeFromCart({ productId: product.id })}
+            disabled={isRemoving}
+          >
+            <Text className="text-xs text-gray-400">Отменить резервацию</Text>
+          </Pressable>
+        )}
       </View>
     </View>
+  );
+}
+
+function ActionButton({
+  isSold,
+  isActive,
+  isMyReservation,
+  isSomeoneElsesReservation,
+  countdown,
+  isAdding,
+  isRemoving,
+  onAddToCart,
+  onRemoveFromCart: _onRemoveFromCart,
+  onCheckout,
+}: {
+  isSold: boolean;
+  isActive: boolean;
+  isMyReservation: boolean;
+  isSomeoneElsesReservation: boolean;
+  countdown: string;
+  isAdding: boolean;
+  isRemoving: boolean;
+  onAddToCart: () => void;
+  onRemoveFromCart: () => void;
+  onCheckout: () => void;
+}) {
+  if (isSold) {
+    return (
+      <View className="bg-gray-100 rounded-full px-6 py-3">
+        <Text className="text-sm font-semibold text-gray-400">Продано</Text>
+      </View>
+    );
+  }
+
+  if (!isActive) {
+    // Archive view — no cart actions
+    return (
+      <View className="bg-gray-100 rounded-full px-6 py-3">
+        <Text className="text-sm font-semibold text-gray-400">Продано</Text>
+      </View>
+    );
+  }
+
+  if (isMyReservation) {
+    return (
+      <View className="items-end gap-1">
+        {countdown ? (
+          <Text className="text-xs text-gray-400">Зарезервировано {countdown}</Text>
+        ) : null}
+        <Pressable
+          className="bg-gray-900 rounded-full px-6 py-3"
+          onPress={onCheckout}
+        >
+          <Text className="text-sm font-semibold text-white">Оформить</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (isSomeoneElsesReservation) {
+    return (
+      <View className="bg-gray-100 rounded-full px-6 py-3">
+        <Text className="text-sm font-semibold text-gray-500">
+          {countdown ? `Занято ${countdown}` : 'Занято'}
+        </Text>
+      </View>
+    );
+  }
+
+  // Available — add to cart
+  return (
+    <Pressable
+      className="bg-gray-900 rounded-full px-6 py-3"
+      onPress={onAddToCart}
+      disabled={isAdding || isRemoving}
+    >
+      {isAdding ? (
+        <ActivityIndicator color="white" size="small" />
+      ) : (
+        <Text className="text-sm font-semibold text-white">В корзину</Text>
+      )}
+    </Pressable>
   );
 }

@@ -5,6 +5,9 @@ export const queryKeys = {
     byId: (id: string) => ['drops', 'id', id] as const,
     archived: () => ['drops', 'archived'] as const,
   },
+  reservations: {
+    active: () => ['reservations', 'active'] as const,
+  },
   profile: {
     me: () => ['profile', 'me'] as const,
   },

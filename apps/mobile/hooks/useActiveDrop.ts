@@ -14,6 +14,8 @@ export type ProductImage = {
   position: number;
 };
 
+export type ProductStatus = 'draft' | 'available' | 'sold';
+
 export type DropProduct = {
   id: string;
   name: string;
@@ -25,6 +27,7 @@ export type DropProduct = {
   item_number: string | null;
   price: number;
   stock_quantity: number;
+  status: ProductStatus;
   images: ProductImage[];
 };
 
@@ -70,6 +73,7 @@ async function fetchActiveDrop(): Promise<ActiveDrop | null> {
           item_number,
           price,
           stock_quantity,
+          status,
           images:product_images (
             url,
             position
