@@ -2,7 +2,7 @@
 
 ## Overview
 
-Daily Drop Shop — секонд-хенд магазин одежды. Monorepo с мобильным приложением на Expo/React Native и Supabase в качестве backend.
+Daily Drop Shop — секонд-хенд магазин одежды. Monorepo с мобильным приложением на Expo/React Native, веб-панелью администратора на Vite/React и Supabase в качестве backend.
 
 ### Домен
 
@@ -15,14 +15,14 @@ Daily Drop Shop — секонд-хенд магазин одежды. Monorepo 
 ```
 ┌─────────────────────────────────────────┐
 │           Mobile App (Expo RN)          │
-│  ┌──────────┐  ┌──────────────────────┐ │
-│  │ Expo     │  │ TanStack Query       │ │
-│  │ Router   │  │ (server state)       │ │
-│  └──────────┘  └──────────────────────┘ │
-│  ┌──────────┐  ┌──────────────────────┐ │
-│  │ Zustand  │  │ Supabase JS client   │ │
-│  │ (client) │  │                      │ │
-│  └──────────┘  └──────────────────────┘ │
+│  Expo Router · TanStack Query           │
+│  Zustand · Supabase JS client           │
+└─────────────────────────────────────────┘
+                     │
+┌─────────────────────────────────────────┐
+│         Admin Panel (Vite/React)        │
+│  React Router · TanStack Query          │
+│  React Hook Form · Supabase JS client   │
 └─────────────────────────────────────────┘
                      │
                      ▼
@@ -30,7 +30,7 @@ Daily Drop Shop — секонд-хенд магазин одежды. Monorepo 
 │              Supabase                   │
 │  ┌──────────┐  ┌──────────────────────┐ │
 │  │ Auth     │  │ PostgreSQL           │ │
-│  │ (OAuth)  │  │ (products, orders..) │ │
+│  │ (Email)  │  │ (products, orders..) │ │
 │  └──────────┘  └──────────────────────┘ │
 │  ┌──────────┐  ┌──────────────────────┐ │
 │  │ Storage  │  │ Edge Functions       │ │
@@ -63,6 +63,17 @@ apps/
     stores/
       auth.ts             # Zustand: сессия пользователя
 
+  admin/                  # Vite/React веб-панель администратора
+    src/
+      pages/
+        Login.tsx         # /login
+        Products.tsx      # /products
+        Drops.tsx         # /drops
+      App.tsx             # React Router setup
+      main.tsx            # Entry point + QueryClientProvider
+    lib/
+      supabase.ts         # Supabase client
+
 packages/
   shared/                 # placeholder
 
@@ -78,6 +89,7 @@ See [decisions/](./decisions/) for Architecture Decision Records.
 
 - [ADR-001](./decisions/ADR-001-mobile-framework.md) — выбор мобильного фреймворка
 - [ADR-002](./decisions/ADR-002-backend.md) — выбор backend
+- [ADR-003](./decisions/ADR-003-admin-service.md) — отдельный веб-сервис для админки
 
 ## Data Flow
 

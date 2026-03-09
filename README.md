@@ -33,25 +33,40 @@ pnpm supabase db reset
 - API URL: http://127.0.0.1:54321
 - Тестовый юзер: `test@test.test` / `test123`
 
-### 4. Запуск приложения
+### 4. Переменные окружения (admin)
 
 ```bash
-# Web (основной режим разработки)
+cp apps/admin/.env.example apps/admin/.env
+# Заполнить VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY
+```
+
+### 5. Запуск приложений
+
+```bash
+# Мобильное приложение (web-режим, основной)
 pnpm --filter mobile web -- --clear
+
+# Админ-панель
+pnpm --filter admin dev
 
 # iOS / Android (требует нативной сборки через EAS)
 pnpm --filter mobile start
 ```
 
-> SDK 55 несовместим с Expo Go — разработка ведётся в web-режиме.
+> SDK 55 несовместим с Expo Go — мобильная разработка ведётся в web-режиме.
 
 ## Команды
 
 ```bash
+# Mobile
 pnpm --filter mobile typecheck   # TypeScript
 pnpm --filter mobile lint        # ESLint
 pnpm --filter mobile test        # Jest
 pnpm --filter mobile build       # EAS Build
+
+# Admin
+pnpm --filter admin typecheck    # TypeScript
+pnpm --filter admin build        # Production build
 ```
 
 ## Supabase
