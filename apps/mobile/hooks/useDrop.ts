@@ -50,23 +50,57 @@ async function fetchDrop(id: string): Promise<ActiveDrop | null> {
   return { ...data, drop_items: items } as ActiveDrop;
 }
 
+const ARCHIVED_SELECT = `
+  id,
+  description,
+  scheduled_at,
+  drop_items (
+    id,
+    position,
+    product:products (
+      id,
+      stock_quantity,
+      images:product_images (
+        url,
+        position
+      )
+    )
+  )
+`;
+
 export async function fetchArchivedDrops() {
   const { data, error } = await supabase
     .from('drops')
-    .select('id, title, description, scheduled_at, published_at')
+    .select(ARCHIVED_SELECT)
     .eq('status', 'archived')
     .order('scheduled_at', { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  if (!data) return [];
+
+  return data.map((drop) => {
+    const items = (drop.drop_items as unknown as ArchivedDropItem[]).sort(
+      (a, b) => a.position - b.position
+    );
+    return { ...drop, drop_items: items } as ArchivedDrop;
+  });
 }
+
+export type ArchivedDropItem = {
+  id: string;
+  position: number;
+  product: {
+    id: string;
+    stock_quantity: number;
+    images: { url: string; position: number }[];
+  };
+};
 
 export type ArchivedDrop = {
   id: string;
-  title: string | null;
   description: string | null;
   scheduled_at: string;
-  published_at: string | null;
+  drop_items: ArchivedDropItem[];
 };
 
 export function useDrop(id: string) {

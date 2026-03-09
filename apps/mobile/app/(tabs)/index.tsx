@@ -1,13 +1,11 @@
-import { ActivityIndicator, Dimensions, FlatList, Image, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useActiveDrop, type DropItem } from '../../hooks/useActiveDrop';
-
-const COLS = 3;
-const GAP = 1;
-const CELL_SIZE = (Dimensions.get('window').width - GAP * (COLS - 1)) / COLS;
+import { usePhotoGrid } from '../../lib/grid';
 
 export default function DropsScreen() {
   const { data: drop, isLoading, error } = useActiveDrop();
+  const { cols, cellSize, gap } = usePhotoGrid();
 
   if (isLoading) {
     return (
@@ -39,11 +37,12 @@ export default function DropsScreen() {
   return (
     <View className="flex-1 bg-white">
       <FlatList
+        key={cols}
         data={drop.drop_items}
         keyExtractor={(item) => item.id}
-        numColumns={COLS}
-        columnWrapperStyle={{ gap: GAP }}
-        ItemSeparatorComponent={() => <View style={{ height: GAP }} />}
+        numColumns={cols}
+        columnWrapperStyle={cols > 1 ? { gap } : undefined}
+        ItemSeparatorComponent={() => <View style={{ height: gap }} />}
         ListHeaderComponent={
           drop.description ? (
             <View className="px-4 py-3 border-b border-gray-100">
@@ -52,20 +51,30 @@ export default function DropsScreen() {
           ) : null
         }
         renderItem={({ item, index }) => (
-          <GridCell item={item} index={index} dropId={drop.id} />
+          <GridCell item={item} index={index} dropId={drop.id} cellSize={cellSize} />
         )}
       />
     </View>
   );
 }
 
-function GridCell({ item, index, dropId }: { item: DropItem; index: number; dropId: string }) {
+function GridCell({
+  item,
+  index,
+  dropId,
+  cellSize,
+}: {
+  item: DropItem;
+  index: number;
+  dropId: string;
+  cellSize: number;
+}) {
   const isSoldOut = item.product.stock_quantity === 0;
   const imageUrl = item.product.images[0]?.url;
 
   return (
     <Pressable
-      style={{ width: CELL_SIZE, height: CELL_SIZE }}
+      style={{ width: cellSize, height: cellSize }}
       onPress={() =>
         router.push({ pathname: '/item/[id]', params: { id: item.product.id, dropId, index } })
       }
@@ -73,7 +82,7 @@ function GridCell({ item, index, dropId }: { item: DropItem; index: number; drop
       {imageUrl ? (
         <Image
           source={{ uri: imageUrl }}
-          style={{ width: CELL_SIZE, height: CELL_SIZE }}
+          style={{ width: cellSize, height: cellSize }}
           resizeMode="cover"
         />
       ) : (
