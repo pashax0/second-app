@@ -14,21 +14,54 @@ create policy "profiles: own read" on public.profiles
 create policy "profiles: own update" on public.profiles
   for update using (auth.uid() = id);
 
--- products: public read
+-- products: public read; admin write
 create policy "products: public read" on public.products
   for select using (true);
 
--- product_images: public read
+create policy "products: authenticated insert" on public.products
+  for insert with check (auth.role() = 'authenticated');
+
+create policy "products: authenticated update" on public.products
+  for update using (auth.role() = 'authenticated');
+
+create policy "products: authenticated delete" on public.products
+  for delete using (auth.role() = 'authenticated');
+
+-- product_images: public read; admin write
 create policy "product_images: public read" on public.product_images
   for select using (true);
 
--- drops: public read (active and archived only; drafts hidden)
+create policy "product_images: authenticated insert" on public.product_images
+  for insert with check (auth.role() = 'authenticated');
+
+create policy "product_images: authenticated delete" on public.product_images
+  for delete using (auth.role() = 'authenticated');
+
+-- drops: public read (active and archived only); admin reads all + full write
 create policy "drops: public read" on public.drops
   for select using (status in ('active', 'archived'));
 
--- drop_items: public read
+create policy "drops: authenticated read all" on public.drops
+  for select using (auth.role() = 'authenticated');
+
+create policy "drops: authenticated insert" on public.drops
+  for insert with check (auth.role() = 'authenticated');
+
+create policy "drops: authenticated update" on public.drops
+  for update using (auth.role() = 'authenticated');
+
+create policy "drops: authenticated delete" on public.drops
+  for delete using (auth.role() = 'authenticated');
+
+-- drop_items: public read; admin write
 create policy "drop_items: public read" on public.drop_items
   for select using (true);
+
+create policy "drop_items: authenticated insert" on public.drop_items
+  for insert with check (auth.role() = 'authenticated');
+
+create policy "drop_items: authenticated delete" on public.drop_items
+  for delete using (auth.role() = 'authenticated');
 
 -- orders: users can read their own orders
 create policy "orders: own read" on public.orders
@@ -56,4 +89,24 @@ create policy "order_items: authenticated insert" on public.order_items
       where orders.id = order_items.order_id
         and orders.user_id = auth.uid()
     )
+  );
+
+-- Storage: product images bucket
+insert into storage.buckets (id, name, public)
+values ('product-images', 'product-images', true)
+on conflict (id) do nothing;
+
+create policy "product-images: public read" on storage.objects
+  for select using (bucket_id = 'product-images');
+
+create policy "product-images: authenticated upload" on storage.objects
+  for insert with check (
+    bucket_id = 'product-images'
+    and auth.role() = 'authenticated'
+  );
+
+create policy "product-images: authenticated delete" on storage.objects
+  for delete using (
+    bucket_id = 'product-images'
+    and auth.role() = 'authenticated'
   );
