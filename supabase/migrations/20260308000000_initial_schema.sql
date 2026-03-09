@@ -5,6 +5,7 @@ create table public.profiles (
   phone       text,
   address     text,
   push_token  text,
+  is_admin    boolean not null default false,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -21,7 +22,10 @@ create table public.products (
   item_number     text,           -- internal shop number, e.g. "202"
   price           numeric(10,2) not null,
   stock_quantity  int not null default 0,
-  status          text not null default 'draft' check (status in ('draft', 'active', 'sold')),
+  -- draft: created, not in active drop
+  -- available: in active drop, purchasable
+  -- sold: purchased
+  status          text not null default 'draft' check (status in ('draft', 'available', 'sold')),
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -62,6 +66,22 @@ create table public.drop_items (
   created_at      timestamptz not null default now(),
   unique (drop_id, product_id)
 );
+
+-- reservations: cart state (temporary, replaces 'reserved' product status)
+-- A product is "in cart" if a non-expired row exists here.
+-- No background cleanup needed — expired rows are ignored on read.
+create table public.reservations (
+  id          uuid primary key default gen_random_uuid(),
+  product_id  uuid not null references public.products(id) on delete cascade,
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  drop_id     uuid not null references public.drops(id) on delete cascade,
+  expires_at  timestamptz not null,
+  created_at  timestamptz not null default now(),
+  unique (product_id)  -- one active reservation per product
+);
+
+create index on public.reservations (product_id, expires_at);
+create index on public.reservations (user_id);
 
 -- orders
 create table public.orders (
