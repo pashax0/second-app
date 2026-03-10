@@ -85,11 +85,12 @@ _(Repeat 2–4 for each milestone)_
 ## End of Session
 
 Before ending any session, update `memory/MEMORY.md`:
-1. Update `## ▶ Next Session Start` with current branch, what was done, and a ready-to-paste prompt
-2. Update `## Roadmap` to reflect completed items
-3. Update `## Known Gotchas` if new issues/solutions were found
+1. Update `## ▶ Next Session Start` — branch, status, ready-to-paste git command
+2. Update `## Roadmap` — mark completed items
+3. Update `## Known Gotchas` — only if a new non-obvious issue was discovered
 
-The next session prompt should be self-contained: branch name + what's done + what to do next.
+**What belongs in MEMORY.md:** project-specific decisions, domain rules, gotchas, session handoff.
+**What does NOT belong:** tech stack (→ CLAUDE.md), file structure (→ docs/architecture.md), git workflow (→ skill), anything already covered by rules or skills.
 
 ---
 

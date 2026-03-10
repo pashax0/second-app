@@ -60,7 +60,6 @@ See [docs/architecture.md](docs/architecture.md) for details.
 
 @.llm/rules/behavior.md
 @.llm/rules/code-style.md
-@.llm/rules/git-workflow.md
 @.llm/rules/testing.md
 @.llm/rules/workflow.md
 @.llm/rules/react-native.md

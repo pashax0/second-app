@@ -31,9 +31,10 @@ Write the commit message following Conventional Commits:
 ```
 
 Rules:
-- Subject line max 72 characters
+- Subject line max 72 characters — no exceptions
 - Present tense, lowercase, no period
-- Body explains motivation, not the diff itself
+- Body (optional) explains WHY, not what — the diff shows what
+- Never list changed files or bullet-point changes in the body
 
 ## Step 4: Verify
 
