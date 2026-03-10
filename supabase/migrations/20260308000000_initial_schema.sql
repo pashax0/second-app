@@ -128,3 +128,22 @@ create trigger set_updated_at before update on public.orders
 
 -- Enable Realtime for reservations (needed for live cart/timer updates across browsers)
 alter publication supabase_realtime add table public.reservations;
+
+-- Transfer non-expired reservations from an anonymous user to the currently signed-in user.
+-- Used when an anonymous user signs into an existing account.
+-- SECURITY DEFINER: runs as owner, bypassing RLS to update rows owned by another user.
+-- Safety: target is always auth.uid() (cannot be spoofed by the client).
+create or replace function public.transfer_reservations(anon_user_id uuid)
+returns void language plpgsql security definer as $$
+begin
+  -- Skip products the real user already has reserved (unique constraint on product_id)
+  update public.reservations
+  set user_id = auth.uid()
+  where user_id = anon_user_id
+    and expires_at > now()
+    and product_id not in (
+      select product_id from public.reservations
+      where user_id = auth.uid() and expires_at > now()
+    );
+end;
+$$;

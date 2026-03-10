@@ -52,8 +52,8 @@ create policy "product_images: authenticated delete" on public.product_images
 create policy "drops: public read" on public.drops
   for select using (status in ('active', 'archived'));
 
-create policy "drops: authenticated read all" on public.drops
-  for select using (auth.role() = 'authenticated');
+create policy "drops: admin read all" on public.drops
+  for select using (public.is_admin());
 
 create policy "drops: authenticated insert" on public.drops
   for insert with check (auth.role() = 'authenticated');

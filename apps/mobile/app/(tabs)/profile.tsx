@@ -35,14 +35,39 @@ async function saveProfile(userId: string, form: ProfileForm) {
   if (error) throw error;
 }
 
+function GuestScreen() {
+  return (
+    <View className="flex-1 items-center justify-center bg-white px-8">
+      <Text className="text-2xl font-bold text-gray-900 mb-2">Профиль</Text>
+      <Text className="text-gray-500 text-center mb-8">
+        Войдите, чтобы видеть заказы и управлять профилем
+      </Text>
+      <Pressable
+        className="bg-gray-900 rounded-full px-8 py-3 mb-3 w-full items-center"
+        onPress={() => router.push('/(auth)/sign-in')}
+      >
+        <Text className="text-white font-semibold">Войти</Text>
+      </Pressable>
+      <Pressable
+        className="border border-gray-200 rounded-full px-8 py-3 w-full items-center"
+        onPress={() => router.push('/(auth)/sign-up')}
+      >
+        <Text className="text-gray-900 font-semibold">Создать аккаунт</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
-  const { user, signOut } = useAuthStore();
+  const { user, isAnonymous, signOut } = useAuthStore();
+  const isGuest = !user || isAnonymous;
+
   const queryClient = useQueryClient();
 
   const { data: profile, isLoading } = useQuery({
     queryKey: queryKeys.profile.me(),
-    queryFn: user ? () => fetchProfile(user.id) : undefined,
-    enabled: !!user,
+    queryFn: () => fetchProfile(user!.id),
+    enabled: !isGuest,
   });
 
   const {
@@ -72,6 +97,8 @@ export default function ProfileScreen() {
       reset(undefined, { keepValues: true });
     },
   });
+
+  if (isGuest) return <GuestScreen />;
 
   if (isLoading) {
     return (

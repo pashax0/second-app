@@ -20,10 +20,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (isLoading) return
 
     const inAuthGroup = segments[0] === '(auth)'
+    const isAnonymous = user?.is_anonymous ?? false
 
-    if (!user && !inAuthGroup) {
-      router.replace('/(auth)/sign-in')
-    } else if (user && inAuthGroup) {
+    // Redirect real (non-anonymous) authenticated users away from auth screens
+    if (user && !isAnonymous && inAuthGroup) {
       router.replace('/(tabs)')
     }
   }, [user, isLoading, segments])

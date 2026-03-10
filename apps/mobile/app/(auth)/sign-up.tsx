@@ -19,6 +19,8 @@ type FormData = z.infer<typeof schema>
 
 export default function SignUpScreen() {
   const signUp = useAuthStore((s) => s.signUp)
+  const upgradeToFullAccount = useAuthStore((s) => s.upgradeToFullAccount)
+  const isAnonymous = useAuthStore((s) => s.isAnonymous)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
 
@@ -30,7 +32,12 @@ export default function SignUpScreen() {
   const onSubmit = async (data: FormData) => {
     try {
       setError(null)
-      await signUp(data.email, data.password)
+      if (isAnonymous) {
+        // Convert anonymous account to real one — same user_id, reservations preserved
+        await upgradeToFullAccount(data.email, data.password)
+      } else {
+        await signUp(data.email, data.password)
+      }
       setDone(true)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Ошибка регистрации')
