@@ -48,6 +48,8 @@ export function useReservations(productIds: string[]) {
         { event: '*', schema: 'public', table: 'reservations' },
         () => {
           queryClient.invalidateQueries({ queryKey: queryKeys.reservations.active() });
+          // Reservation deleted on purchase → refresh product statuses too
+          queryClient.invalidateQueries({ queryKey: queryKeys.drops.active() });
         }
       )
       .subscribe();

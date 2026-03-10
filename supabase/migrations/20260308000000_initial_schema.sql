@@ -125,3 +125,6 @@ create trigger set_updated_at before update on public.drops
   for each row execute function public.set_updated_at();
 create trigger set_updated_at before update on public.orders
   for each row execute function public.set_updated_at();
+
+-- Enable Realtime for reservations (needed for live cart/timer updates across browsers)
+alter publication supabase_realtime add table public.reservations;
