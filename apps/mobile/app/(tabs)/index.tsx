@@ -1,12 +1,44 @@
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useActiveDrop, type DropItem } from '../../hooks/useActiveDrop';
-import { useReservations } from '../../hooks/useReservations';
+import { useReservations, useExpiryTrigger, type Reservation } from '../../hooks/useReservations';
 import { usePhotoGrid } from '../../lib/grid';
+import { useAuthStore } from '../../stores/auth';
+
+function useCountdown(expiresAt: string | undefined): string {
+  const [label, setLabel] = useState('');
+
+  useEffect(() => {
+    if (!expiresAt) {
+      setLabel('');
+      return;
+    }
+
+    const tick = () => {
+      const ms = new Date(expiresAt).getTime() - Date.now();
+      if (ms <= 0) {
+        setLabel('');
+        return;
+      }
+      const totalSec = Math.ceil(ms / 1000);
+      const min = Math.floor(totalSec / 60);
+      const sec = totalSec % 60;
+      setLabel(`${min}:${String(sec).padStart(2, '0')}`);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  return label;
+}
 
 export default function DropsScreen() {
   const { data: drop, isLoading, error } = useActiveDrop();
   const { cols, cellSize, gap } = usePhotoGrid();
+  const { user } = useAuthStore();
 
   const productIds = drop?.drop_items.map((i) => i.product.id) ?? [];
   const { data: reservations } = useReservations(productIds);
@@ -61,6 +93,7 @@ export default function DropsScreen() {
             dropId={drop.id}
             cellSize={cellSize}
             reservation={reservations?.get(item.product.id)}
+            currentUserId={user?.id}
           />
         )}
       />
@@ -74,16 +107,21 @@ function GridCell({
   dropId,
   cellSize,
   reservation,
+  currentUserId,
 }: {
   item: DropItem;
   index: number;
   dropId: string;
   cellSize: number;
-  reservation?: { expires_at: string } | undefined;
+  reservation?: Reservation | undefined;
+  currentUserId?: string;
 }) {
   const isSold = item.product.status === 'sold';
-  const isReserved = !!reservation;
+  const isMyReservation = !!reservation && reservation.user_id === currentUserId;
+  const isSomeoneElsesReservation = !!reservation && !isMyReservation;
   const imageUrl = item.product.images[0]?.url;
+  const countdown = useCountdown(reservation?.expires_at);
+  useExpiryTrigger(reservation);
 
   return (
     <Pressable
@@ -111,9 +149,19 @@ function GridCell({
         </View>
       )}
 
-      {!isSold && isReserved && (
+      {isMyReservation && (
+        <View className="absolute bottom-0 left-0 right-0 bg-gray-900/70 py-1 items-center">
+          <Text className="text-white text-xs font-medium">
+            {countdown ? `В корзине ${countdown}` : 'В корзине'}
+          </Text>
+        </View>
+      )}
+
+      {isSomeoneElsesReservation && (
         <View className="absolute bottom-0 left-0 right-0 bg-black/50 py-1 items-center">
-          <Text className="text-white text-xs font-medium">Занято</Text>
+          <Text className="text-white text-xs font-medium">
+            {countdown ? `Зарезервировано ${countdown}` : 'Зарезервировано'}
+          </Text>
         </View>
       )}
     </Pressable>

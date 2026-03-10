@@ -129,6 +129,31 @@ create trigger set_updated_at before update on public.orders
 -- Enable Realtime for reservations (needed for live cart/timer updates across browsers)
 alter publication supabase_realtime add table public.reservations;
 
+-- Deletes an expired reservation for a specific product, triggering a Realtime DELETE event.
+-- SECURITY DEFINER: RLS allows deleting only own rows, but any authenticated client
+-- may need to expire a reservation belonging to another user (e.g. before inserting their own).
+-- Safe: only deletes rows where expires_at < now() — cannot remove active reservations.
+create or replace function public.expire_reservation(p_product_id uuid)
+returns void language plpgsql security definer as $$
+begin
+  delete from public.reservations
+  where product_id = p_product_id
+    and expires_at < now();
+end;
+$$;
+
+-- pg_cron fallback: cleans up reservations that nobody expired client-side (case E in ADR-004).
+-- Requires pg_cron extension; silently skipped if unavailable (e.g. local dev without pg_cron).
+do $outer$ begin
+  perform cron.schedule(
+    'expire-reservations',
+    '*/5 * * * *',
+    'delete from public.reservations where expires_at < now()'
+  );
+exception when others then
+  null;
+end $outer$;
+
 -- Transfer non-expired reservations from an anonymous user to the currently signed-in user.
 -- Used when an anonymous user signs into an existing account.
 -- SECURITY DEFINER: runs as owner, bypassing RLS to update rows owned by another user.

@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { queryKeys } from '../lib/queryKeys';
 
-const RESERVATION_MINUTES = 10;
-const ANONYMOUS_RESERVATION_MINUTES = 5;
+const RESERVATION_MINUTES = 60 / 60; // 60 sec for testing
+const ANONYMOUS_RESERVATION_MINUTES = 20 / 60; // 20 sec for testing
 const ANONYMOUS_CART_LIMIT = 1;
 
 export type CartItem = {
@@ -79,12 +79,9 @@ export function useAddToCart() {
       const minutes = isAnon ? ANONYMOUS_RESERVATION_MINUTES : RESERVATION_MINUTES;
       const expiresAt = new Date(Date.now() + minutes * 60 * 1000).toISOString();
 
-      // Remove own stale reservation for this product before inserting fresh one
-      await supabase
-        .from('reservations')
-        .delete()
-        .eq('product_id', productId)
-        .eq('user_id', user.id);
+      // Clear any expired reservation for this product (own or someone else's) before inserting.
+      // Uses expire_reservation RPC (SECURITY DEFINER) since RLS only allows deleting own rows.
+      await supabase.rpc('expire_reservation', { p_product_id: productId });
 
       const { error: insertError } = await supabase.from('reservations').insert({
         product_id: productId,

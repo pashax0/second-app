@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, Text, useWindowDimensions, View, ViewToken } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useActiveDrop, type DropItem, type Measurements } from '../../hooks/useActiveDrop';
-import { useReservations, type Reservation } from '../../hooks/useReservations';
+import { useReservations, useExpiryTrigger, type Reservation } from '../../hooks/useReservations';
 import { useAddToCart, useRemoveFromCart } from '../../hooks/useCart';
 import { useAuthStore } from '../../stores/auth';
 
@@ -126,6 +126,7 @@ function ItemCard({
   const isSold = product.status === 'sold';
   const isMyReservation = !!reservation && reservation.user_id === user?.id;
   const isSomeoneElsesReservation = !!reservation && !isMyReservation;
+  useExpiryTrigger(reservation);
 
   const handleAddToCart = () => {
     addToCart({ productId: product.id, dropId }, {
@@ -237,7 +238,7 @@ function ActionButton({
     return (
       <View className="items-end gap-1">
         {countdown ? (
-          <Text className="text-xs text-gray-400">Зарезервировано {countdown}</Text>
+          <Text className="text-xs text-gray-400">В корзине {countdown}</Text>
         ) : null}
         <Pressable
           className="bg-gray-900 rounded-full px-6 py-3"
@@ -255,7 +256,7 @@ function ActionButton({
     return (
       <View className="bg-gray-100 rounded-full px-6 py-3">
         <Text className="text-sm font-semibold text-gray-500">
-          {countdown ? `Занято ${countdown}` : 'Занято'}
+          {countdown ? `Зарезервировано ${countdown}` : 'Зарезервировано'}
         </Text>
       </View>
     );
