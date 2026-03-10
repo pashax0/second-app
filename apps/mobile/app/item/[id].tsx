@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, Text, useWindowDimensions, View, ViewToken } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useActiveDrop, type DropItem, type Measurements } from '../../hooks/useActiveDrop';
-import { useDrop } from '../../hooks/useDrop';
 import { useReservations, type Reservation } from '../../hooks/useReservations';
 import { useAddToCart, useRemoveFromCart } from '../../hooks/useCart';
 import { useAuthStore } from '../../stores/auth';
@@ -47,13 +46,9 @@ function useCountdown(expiresAt: string | undefined): string {
 }
 
 export default function ItemScreen() {
-  const { index, dropId } = useLocalSearchParams<{ index: string; dropId: string }>();
+  const { index } = useLocalSearchParams<{ index: string; dropId: string }>();
   const { width } = useWindowDimensions();
-  const { data: activeDrop } = useActiveDrop();
-  const isArchived = !!dropId && dropId !== activeDrop?.id;
-  const { data: archivedDrop } = useDrop(isArchived ? dropId : '');
-
-  const drop = isArchived ? archivedDrop : activeDrop;
+  const { data: drop } = useActiveDrop();
 
   const productIds = drop?.drop_items.map((i) => i.product.id) ?? [];
   const { data: reservations } = useReservations(productIds);
@@ -99,7 +94,6 @@ export default function ItemScreen() {
               position={i + 1}
               total={total}
               reservation={reservations?.get(item.product.id)}
-              isActive={!isArchived}
             />
           )}
         />
@@ -113,7 +107,6 @@ function ItemCard({
   dropId,
   width,
   reservation,
-  isActive,
 }: {
   item: DropItem;
   dropId: string;
@@ -121,12 +114,11 @@ function ItemCard({
   position: number;
   total: number;
   reservation: Reservation | undefined;
-  isActive: boolean;
 }) {
   const { product, override_price } = item;
   const displayPrice = override_price ?? product.price;
   const measurements = formatMeasurements(product.measurements);
-  const { user } = useAuthStore();
+  const { user, isAnonymous } = useAuthStore();
   const { mutate: addToCart, isPending: isAdding } = useAddToCart();
   const { mutate: removeFromCart, isPending: isRemoving } = useRemoveFromCart();
   const countdown = useCountdown(reservation?.expires_at);
@@ -134,6 +126,16 @@ function ItemCard({
   const isSold = product.status === 'sold';
   const isMyReservation = !!reservation && reservation.user_id === user?.id;
   const isSomeoneElsesReservation = !!reservation && !isMyReservation;
+
+  const handleAddToCart = () => {
+    addToCart({ productId: product.id, dropId }, {
+      onError: (err) => {
+        if (err instanceof Error && err.message === 'anon_cart_limit') {
+          router.push('/(auth)/sign-in');
+        }
+      },
+    });
+  };
 
   return (
     <View style={{ width }} className="flex-1">
@@ -172,13 +174,13 @@ function ItemCard({
 
           <ActionButton
             isSold={isSold}
-            isActive={isActive}
             isMyReservation={isMyReservation}
             isSomeoneElsesReservation={isSomeoneElsesReservation}
+            isAnonymous={isAnonymous}
             countdown={countdown}
             isAdding={isAdding}
             isRemoving={isRemoving}
-            onAddToCart={() => addToCart({ productId: product.id, dropId })}
+            onAddToCart={handleAddToCart}
             onRemoveFromCart={() => removeFromCart({ productId: product.id })}
             onCheckout={() =>
               router.push({ pathname: '/checkout', params: { dropId, productId: product.id } })
@@ -186,7 +188,6 @@ function ItemCard({
           />
         </View>
 
-        {/* Cancel button shown separately below when it's my reservation */}
         {isMyReservation && (
           <Pressable
             className="mt-3 items-center py-2"
@@ -203,9 +204,9 @@ function ItemCard({
 
 function ActionButton({
   isSold,
-  isActive,
   isMyReservation,
   isSomeoneElsesReservation,
+  isAnonymous,
   countdown,
   isAdding,
   isRemoving,
@@ -214,9 +215,9 @@ function ActionButton({
   onCheckout,
 }: {
   isSold: boolean;
-  isActive: boolean;
   isMyReservation: boolean;
   isSomeoneElsesReservation: boolean;
+  isAnonymous: boolean;
   countdown: string;
   isAdding: boolean;
   isRemoving: boolean;
@@ -232,15 +233,6 @@ function ActionButton({
     );
   }
 
-  if (!isActive) {
-    // Archive view — no cart actions
-    return (
-      <View className="bg-gray-100 rounded-full px-6 py-3">
-        <Text className="text-sm font-semibold text-gray-400">Продано</Text>
-      </View>
-    );
-  }
-
   if (isMyReservation) {
     return (
       <View className="items-end gap-1">
@@ -249,9 +241,11 @@ function ActionButton({
         ) : null}
         <Pressable
           className="bg-gray-900 rounded-full px-6 py-3"
-          onPress={onCheckout}
+          onPress={isAnonymous ? () => router.push('/(auth)/sign-up') : onCheckout}
         >
-          <Text className="text-sm font-semibold text-white">Оформить</Text>
+          <Text className="text-sm font-semibold text-white">
+            {isAnonymous ? 'Войти' : 'Оформить'}
+          </Text>
         </Pressable>
       </View>
     );
@@ -267,7 +261,6 @@ function ActionButton({
     );
   }
 
-  // Available — add to cart
   return (
     <Pressable
       className="bg-gray-900 rounded-full px-6 py-3"
