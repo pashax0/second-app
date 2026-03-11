@@ -5,6 +5,8 @@ import { useActiveDrop, type DropItem, type Measurements } from '../../hooks/use
 import { useReservations, useExpiryTrigger, type Reservation } from '../../hooks/useReservations';
 import { useAddToCart, useRemoveFromCart } from '../../hooks/useCart';
 import { useAuthStore } from '../../stores/auth';
+import { RegistrationGateSheet } from '../../components/RegistrationGateSheet';
+import { useSnackbar } from '../../lib/snackbar';
 
 function formatMeasurements(m: Measurements | null): string {
   if (!m) return '';
@@ -49,6 +51,7 @@ export default function ItemScreen() {
   const { index } = useLocalSearchParams<{ index: string; dropId: string }>();
   const { width } = useWindowDimensions();
   const { data: drop } = useActiveDrop();
+  const [gateVisible, setGateVisible] = useState(false);
 
   const productIds = drop?.drop_items.map((i) => i.product.id) ?? [];
   const { data: reservations } = useReservations(productIds);
@@ -94,10 +97,12 @@ export default function ItemScreen() {
               position={i + 1}
               total={total}
               reservation={reservations?.get(item.product.id)}
+              onAnonCartLimit={() => setGateVisible(true)}
             />
           )}
         />
       </View>
+      <RegistrationGateSheet visible={gateVisible} onClose={() => setGateVisible(false)} />
     </>
   );
 }
@@ -107,6 +112,7 @@ function ItemCard({
   dropId,
   width,
   reservation,
+  onAnonCartLimit,
 }: {
   item: DropItem;
   dropId: string;
@@ -114,6 +120,7 @@ function ItemCard({
   position: number;
   total: number;
   reservation: Reservation | undefined;
+  onAnonCartLimit: () => void;
 }) {
   const { product, override_price } = item;
   const displayPrice = override_price ?? product.price;
@@ -122,6 +129,7 @@ function ItemCard({
   const { mutate: addToCart, isPending: isAdding } = useAddToCart();
   const { mutate: removeFromCart, isPending: isRemoving } = useRemoveFromCart();
   const countdown = useCountdown(reservation?.expires_at);
+  const { show: showSnackbar } = useSnackbar();
 
   const isSold = product.status === 'sold';
   const isMyReservation = !!reservation && reservation.user_id === user?.id;
@@ -132,7 +140,9 @@ function ItemCard({
     addToCart({ productId: product.id, dropId }, {
       onError: (err) => {
         if (err instanceof Error && err.message === 'anon_cart_limit') {
-          router.push('/(auth)/sign-in');
+          onAnonCartLimit();
+        } else {
+          showSnackbar('Что-то пошло не так');
         }
       },
     });

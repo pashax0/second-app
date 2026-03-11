@@ -4,7 +4,6 @@ import { queryKeys } from '../lib/queryKeys';
 
 const RESERVATION_MINUTES = 60 / 60; // 60 sec for testing
 const ANONYMOUS_RESERVATION_MINUTES = 20 / 60; // 20 sec for testing
-const ANONYMOUS_CART_LIMIT = 1;
 
 export type CartItem = {
   id: string;
@@ -62,37 +61,20 @@ export function useAddToCart() {
 
       const user = session!.user;
       const isAnon = user.is_anonymous ?? false;
-
-      if (isAnon) {
-        // Enforce 1-item limit for anonymous users
-        const { data: existing } = await supabase
-          .from('reservations')
-          .select('id')
-          .eq('user_id', user.id)
-          .gt('expires_at', new Date().toISOString());
-
-        if ((existing?.length ?? 0) >= ANONYMOUS_CART_LIMIT) {
-          throw new Error('anon_cart_limit');
-        }
-      }
-
       const minutes = isAnon ? ANONYMOUS_RESERVATION_MINUTES : RESERVATION_MINUTES;
       const expiresAt = new Date(Date.now() + minutes * 60 * 1000).toISOString();
 
-      // Clear any expired reservation for this product (own or someone else's) before inserting.
-      // Uses expire_reservation RPC (SECURITY DEFINER) since RLS only allows deleting own rows.
-      await supabase.rpc('expire_reservation', { p_product_id: productId });
-
-      const { error: insertError } = await supabase.from('reservations').insert({
-        product_id: productId,
-        user_id: user.id,
-        drop_id: dropId,
-        expires_at: expiresAt,
+      // DB-side RPC: atomically checks anon limit, expires stale reservation, inserts.
+      const { error } = await supabase.rpc('create_reservation', {
+        p_product_id: productId,
+        p_drop_id: dropId,
+        p_expires_at: expiresAt,
       });
 
-      if (insertError) {
-        if (insertError.code === '23505') throw new Error('already_reserved');
-        throw insertError;
+      if (error) {
+        if (error.message === 'anon_cart_limit') throw new Error('anon_cart_limit');
+        if (error.code === '23505') throw new Error('already_reserved');
+        throw error;
       }
     },
     onSuccess: () => {
