@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/auth'
+import { SnackbarProvider } from '../lib/snackbar'
 
 const queryClient = new QueryClient()
 
@@ -34,6 +35,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
+      <SnackbarProvider>
       <AuthGate>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -43,6 +45,7 @@ export default function RootLayout() {
           <Stack.Screen name="item/[id]" options={{ title: '' }} />
         </Stack>
       </AuthGate>
+      </SnackbarProvider>
     </QueryClientProvider>
   )
 }

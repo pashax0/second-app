@@ -129,6 +129,36 @@ create trigger set_updated_at before update on public.orders
 -- Enable Realtime for reservations (needed for live cart/timer updates across browsers)
 alter publication supabase_realtime add table public.reservations;
 
+-- Atomically creates a reservation, enforcing anonymous cart limit and expiring stale reservations.
+-- SECURITY DEFINER: needs to call expire_reservation (itself SECURITY DEFINER) and bypass RLS on insert.
+-- Safe: only operates on auth.uid() — target cannot be spoofed by the client.
+create or replace function public.create_reservation(
+  p_product_id uuid,
+  p_drop_id     uuid,
+  p_expires_at  timestamptz
+)
+returns void language plpgsql security definer as $$
+begin
+  -- Enforce 1-item limit for anonymous users
+  -- Query auth.users directly — auth.jwt() ->> 'is_anonymous' is unreliable in local dev.
+  if (select is_anonymous from auth.users where id = auth.uid()) then
+    if (
+      select count(*) from public.reservations
+      where user_id = auth.uid()
+        and expires_at > now()
+    ) >= 1 then
+      raise exception 'anon_cart_limit';
+    end if;
+  end if;
+
+  -- Expire any stale reservation for this product before inserting
+  perform public.expire_reservation(p_product_id);
+
+  insert into public.reservations (product_id, user_id, drop_id, expires_at)
+  values (p_product_id, auth.uid(), p_drop_id, p_expires_at);
+end;
+$$;
+
 -- Deletes an expired reservation for a specific product, triggering a Realtime DELETE event.
 -- SECURITY DEFINER: RLS allows deleting only own rows, but any authenticated client
 -- may need to expire a reservation belonging to another user (e.g. before inserting their own).
