@@ -45,6 +45,44 @@ eas update --branch preview --message "описание"
 - Push notifications (FCM/APNs ключи)
 - CI/CD автозапуск
 
+## Переменные окружения
+
+### Корневой `/.env` (gitignored, только CLI)
+
+```
+SUPABASE_ACCESS_TOKEN=...   # авторизация Supabase CLI
+SUPABASE_DB_PASSWORD=...    # пароль БД для db push / db pull
+```
+
+### `apps/mobile/.env` (gitignored, локальная разработка)
+
+```
+EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<локальный anon key>
+```
+
+Локальный anon key: `pnpm supabase status` → `anon key`.
+
+### `apps/mobile/.env.production` (в git, прод)
+
+```
+EXPO_PUBLIC_SUPABASE_URL=https://unpldsztqntzybvnaais.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<remote anon key>
+```
+
+`EXPO_PUBLIC_*` переменные встраиваются в бандл приложения — это намеренно, anon key не является секретом.
+
+EAS Build автоматически использует `.env.production` для профилей `preview` и `production`.
+
+### Деплой схемы БД
+
+```bash
+# Накатить новые миграции на remote
+pnpm supabase db push
+```
+
+Всегда проверять миграцию локально (`pnpm supabase db reset`) перед push на remote.
+
 ## Expo MCP Server
 
 Официальный MCP от Expo даёт Claude Code доступ к актуальным доксам, управлению сборками и автоматизации UI.

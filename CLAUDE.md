@@ -87,6 +87,7 @@ See [docs/architecture.md](docs/architecture.md) for details.
 @.llm/rules/workflow.md
 @.llm/rules/react-native.md
 @.llm/rules/deploy-mobile.md
+@.llm/rules/supabase.md
 
 ## Context
 
