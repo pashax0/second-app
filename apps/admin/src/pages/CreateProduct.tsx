@@ -97,13 +97,9 @@ export default function CreateProduct() {
 
         if (uploadError) throw uploadError
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(path)
-
         const { error: imgError } = await supabase
           .from('product_images')
-          .insert({ product_id: product.id, url: publicUrl, position: i })
+          .insert({ product_id: product.id, storage_path: path, position: i })
 
         if (imgError) throw imgError
       }

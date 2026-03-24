@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, Text, useWindowDimensions, View, ViewToken } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, Text, useWindowDimensions, View, ViewToken } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { supabase } from '../../lib/supabase';
 import { useActiveDrop, type DropItem, type Measurements } from '../../hooks/useActiveDrop';
 import { useReservations, useExpiryTrigger, type Reservation } from '../../hooks/useReservations';
 import { useAddToCart, useRemoveFromCart } from '../../hooks/useCart';
@@ -52,6 +53,7 @@ export default function ItemScreen() {
   const { width } = useWindowDimensions();
   const { data: drop } = useActiveDrop();
   const [gateVisible, setGateVisible] = useState(false);
+  const [containerHeight, setContainerHeight] = useState(0);
 
   const productIds = drop?.drop_items.map((i) => i.product.id) ?? [];
   const { data: reservations } = useReservations(productIds);
@@ -73,11 +75,17 @@ export default function ItemScreen() {
 
   const items = drop.drop_items;
   const total = items.length;
+  const currentItem = items[currentIndex];
+  const { name, brand } = currentItem.product;
+  const title = [name, brand].filter(Boolean).join(' ');
 
   return (
     <>
-      <Stack.Screen options={{ title: `${currentIndex + 1} / ${total}` }} />
-      <View className="flex-1 bg-white">
+      <Stack.Screen options={{ title }} />
+      <View
+        className="flex-1 bg-white"
+        onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
+      >
         <FlatList
           ref={listRef}
           data={items}
@@ -94,6 +102,7 @@ export default function ItemScreen() {
               item={item}
               dropId={drop.id}
               width={width}
+              height={containerHeight}
               position={i + 1}
               total={total}
               reservation={reservations?.get(item.product.id)}
@@ -111,12 +120,14 @@ function ItemCard({
   item,
   dropId,
   width,
+  height,
   reservation,
   onAnonCartLimit,
 }: {
   item: DropItem;
   dropId: string;
   width: number;
+  height: number;
   position: number;
   total: number;
   reservation: Reservation | undefined;
@@ -149,36 +160,40 @@ function ItemCard({
   };
 
   return (
-    <View style={{ width }} className="flex-1">
-      {product.images[0]?.url ? (
-        <Image
-          source={{ uri: product.images[0].url }}
-          style={{ width, aspectRatio: 1 }}
-          resizeMode="cover"
-        />
-      ) : (
-        <View className="bg-gray-100" style={{ width, aspectRatio: 1 }} />
-      )}
+    <View style={{ width, height }}>
+      <ScrollView>
+        {product.images[0] ? (
+          <Image
+            source={{ uri: supabase.storage.from('product-images').getPublicUrl(product.images[0].storage_path).data.publicUrl }}
+            style={{ width, aspectRatio: 1 }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="bg-gray-100" style={{ width, aspectRatio: 1 }} />
+        )}
 
-      <View className="px-4 pt-4 pb-8">
-        <Text className="text-xl font-bold text-gray-900">{product.name}</Text>
+        <View className="px-4 pt-4 pb-4">
+          <Text className="text-xl font-bold text-gray-900">{product.name}</Text>
 
-        <View className="flex-row items-center gap-2 mt-1">
-          {product.brand ? <Text className="text-sm text-gray-700">{product.brand}</Text> : null}
-          {product.country ? (
-            <Text className="text-sm text-gray-400">{product.country}</Text>
+          <View className="flex-row items-center gap-2 mt-1">
+            {product.brand ? <Text className="text-sm text-gray-700">{product.brand}</Text> : null}
+            {product.country ? (
+              <Text className="text-sm text-gray-400">{product.country}</Text>
+            ) : null}
+          </View>
+
+          {product.size ? (
+            <Text className="text-sm text-gray-600 mt-1">Размер {product.size}</Text>
+          ) : null}
+
+          {measurements ? (
+            <Text className="text-sm text-gray-500 mt-1">{measurements}</Text>
           ) : null}
         </View>
+      </ScrollView>
 
-        {product.size ? (
-          <Text className="text-sm text-gray-600 mt-1">Размер {product.size}</Text>
-        ) : null}
-
-        {measurements ? (
-          <Text className="text-sm text-gray-500 mt-1">{measurements}</Text>
-        ) : null}
-
-        <View className="flex-row items-center justify-between mt-5">
+      <View className="px-4 pt-4 pb-8 border-t border-gray-100 bg-white">
+        <View className="flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-gray-900">
             {displayPrice.toLocaleString('ru-RU')} ₽
           </Text>

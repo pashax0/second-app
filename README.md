@@ -11,46 +11,49 @@
 pnpm install
 ```
 
-### 2. Переменные окружения
-
-```bash
-cp apps/mobile/.env.example apps/mobile/.env
-# Заполнить EXPO_PUBLIC_SUPABASE_URL и EXPO_PUBLIC_SUPABASE_ANON_KEY
-```
-
-### 3. Supabase (локально)
+### 2. Supabase (локально)
 
 ```bash
 # Запустить локальный Supabase (Docker должен быть запущен)
 pnpm supabase start
 
-# Применить миграции и seed-данные
+# Применить миграции + seed-данные
 pnpm supabase db reset
+
+# Загрузить seed-изображения в локальный Storage
+pnpm seed:storage
 ```
 
-После `db reset` доступны:
+После `db reset` + `seed:storage` доступны:
 - Studio: http://127.0.0.1:54323
 - API URL: http://127.0.0.1:54321
 - Тестовый юзер: `test@test.test` / `test123`
+- Админ: `admin@test.com` / `admin123`
+- Anon key: `pnpm supabase status` → `ANON_KEY`
 
-### 4. Переменные окружения (admin)
+### 3. Переменные окружения
 
 ```bash
+# Mobile
+cp apps/mobile/.env.example apps/mobile/.env
+# Вставить EXPO_PUBLIC_SUPABASE_URL и EXPO_PUBLIC_SUPABASE_ANON_KEY из `pnpm supabase status`
+
+# Admin
 cp apps/admin/.env.example apps/admin/.env
-# Заполнить VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY
+# Вставить VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY из `pnpm supabase status`
 ```
 
-### 5. Запуск приложений
+### 4. Запуск
 
 ```bash
 # Мобильное приложение (web-режим, основной)
 pnpm --filter mobile web -- --clear
 
-# Админ-панель
+# Админ-панель (локальная БД)
 pnpm --filter admin dev
 
-# iOS / Android (требует нативной сборки через EAS)
-pnpm --filter mobile start
+# Админ-панель (продакшн БД — для добавления товаров в прод)
+pnpm --filter admin dev -- --mode production
 ```
 
 > SDK 55 несовместим с Expo Go — мобильная разработка ведётся в web-режиме.
@@ -62,20 +65,22 @@ pnpm --filter mobile start
 pnpm --filter mobile typecheck   # TypeScript
 pnpm --filter mobile lint        # ESLint
 pnpm --filter mobile test        # Jest
-pnpm --filter mobile build       # EAS Build
 
 # Admin
 pnpm --filter admin typecheck    # TypeScript
 pnpm --filter admin build        # Production build
+
+# Supabase
+pnpm supabase start              # запустить
+pnpm supabase stop               # остановить
+pnpm supabase db reset           # сбросить БД + миграции + seed
+pnpm seed:storage                # загрузить seed-изображения в локальный Storage
+pnpm supabase db push            # накатить миграции на продакшн
 ```
 
-## Supabase
+## Деплой
 
-```bash
-pnpm supabase start    # запустить
-pnpm supabase stop     # остановить
-pnpm supabase db reset # сбросить БД + применить миграции + seed
-```
+См. [docs/deploy.md](docs/deploy.md) — EAS Build, фокус-группа, продакшн workflow.
 
 ## Архитектура
 

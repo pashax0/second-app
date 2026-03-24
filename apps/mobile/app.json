@@ -22,7 +22,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.pashax0.dailydropshop"
     },
     "web": {
       "bundler": "metro",
@@ -30,6 +31,13 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7dcf1856-1546-4e23-9922-12881ae35a1f"
+      }
+    },
+    "owner": "pashax0"
   }
 }

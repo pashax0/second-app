@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "expo-mcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.expo.dev/mcp"]
+    },
+    "supabase": {
+      "type": "sse",
+      "url": "http://127.0.0.1:54321/mcp"
+    },
+    "supabase-cloud": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "sbp_abb02e2b6c6b92cbd91cca60b3c61a5247970448"]
+    }
+  }
+}

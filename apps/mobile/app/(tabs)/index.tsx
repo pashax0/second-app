@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { supabase } from '../../lib/supabase';
 import { useActiveDrop, type DropItem } from '../../hooks/useActiveDrop';
 import { useReservations, useExpiryTrigger, type Reservation } from '../../hooks/useReservations';
 import { usePhotoGrid } from '../../lib/grid';
@@ -101,6 +102,47 @@ export default function DropsScreen() {
   );
 }
 
+function ImageWithFallback({
+  imageUrl,
+  cellSize,
+  brand,
+  size,
+}: {
+  imageUrl: string | undefined;
+  cellSize: number;
+  brand?: string | null;
+  size?: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (!imageUrl || failed) {
+    return (
+      <View
+        className="bg-gray-100 items-center justify-center gap-1"
+        style={{ width: cellSize, height: cellSize }}
+      >
+        {brand && (
+          <Text className="text-xs font-semibold text-gray-500 text-center px-2" numberOfLines={2}>
+            {brand}
+          </Text>
+        )}
+        {size && (
+          <Text className="text-xs text-gray-400">{size}</Text>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: imageUrl }}
+      style={{ width: cellSize, height: cellSize }}
+      resizeMode="cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function GridCell({
   item,
   index,
@@ -119,7 +161,10 @@ function GridCell({
   const isSold = item.product.status === 'sold';
   const isMyReservation = !!reservation && reservation.user_id === currentUserId;
   const isSomeoneElsesReservation = !!reservation && !isMyReservation;
-  const imageUrl = item.product.images[0]?.url;
+  const firstImage = item.product.images[0];
+  const imageUrl = firstImage
+    ? supabase.storage.from('product-images').getPublicUrl(firstImage.storage_path).data.publicUrl
+    : undefined;
   const countdown = useCountdown(reservation?.expires_at);
   useExpiryTrigger(reservation);
 
@@ -130,15 +175,12 @@ function GridCell({
         router.push({ pathname: '/item/[id]', params: { id: item.product.id, dropId, index } })
       }
     >
-      {imageUrl ? (
-        <Image
-          source={{ uri: imageUrl }}
-          style={{ width: cellSize, height: cellSize }}
-          resizeMode="cover"
-        />
-      ) : (
-        <View className="flex-1 bg-gray-100" />
-      )}
+      <ImageWithFallback
+        imageUrl={imageUrl}
+        cellSize={cellSize}
+        brand={item.product.brand}
+        size={item.product.size}
+      />
 
       {isSold && (
         <View
