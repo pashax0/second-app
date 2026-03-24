@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, Text, useWindowDimensions, View, ViewToken } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { supabase } from '../../lib/supabase';
 import { useActiveDrop, type DropItem, type Measurements } from '../../hooks/useActiveDrop';
 import { useReservations, useExpiryTrigger, type Reservation } from '../../hooks/useReservations';
 import { useAddToCart, useRemoveFromCart } from '../../hooks/useCart';
@@ -161,9 +162,9 @@ function ItemCard({
   return (
     <View style={{ width, height }}>
       <ScrollView>
-        {product.images[0]?.url ? (
+        {product.images[0] ? (
           <Image
-            source={{ uri: product.images[0].url }}
+            source={{ uri: supabase.storage.from('product-images').getPublicUrl(product.images[0].storage_path).data.publicUrl }}
             style={{ width, aspectRatio: 1 }}
             resizeMode="cover"
           />

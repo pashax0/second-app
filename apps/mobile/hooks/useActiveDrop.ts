@@ -10,7 +10,7 @@ export type Measurements = {
 };
 
 export type ProductImage = {
-  url: string;
+  storage_path: string;
   position: number;
 };
 
@@ -75,7 +75,7 @@ async function fetchActiveDrop(): Promise<ActiveDrop | null> {
           stock_quantity,
           status,
           images:product_images (
-            url,
+            storage_path,
             position
           )
         )

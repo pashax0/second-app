@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 
 interface ProductImage {
-  url: string
+  storage_path: string
   position: number
 }
 
@@ -21,7 +21,7 @@ interface Product {
 async function fetchProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, brand, size, price, status, product_images(url, position)')
+    .select('id, name, brand, size, price, status, product_images(storage_path, position)')
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -114,7 +114,7 @@ export default function Products() {
                     <td className="py-2 pr-4">
                       {thumb ? (
                         <img
-                          src={thumb.url}
+                          src={supabase.storage.from('product-images').getPublicUrl(thumb.storage_path).data.publicUrl}
                           alt=""
                           className="h-12 w-12 object-cover rounded border border-gray-200"
                         />

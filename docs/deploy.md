@@ -9,41 +9,70 @@ EAS Build (Expo Application Services)
 - Android package: `com.pashax0.dailydropshop`
 - Конфиг: `apps/mobile/eas.json`, `apps/mobile/app.json`
 
+## Supabase (продакшн)
+
+- Project ref: `unpldsztqntzybvnaais`
+- URL: `https://unpldsztqntzybvnaais.supabase.co`
+- Уже слинкован: `supabase/.temp/project-ref`
+
 ## Профили сборки
 
 | Профиль | Назначение | Артефакт | Дистрибуция |
 |---|---|---|---|
 | `development` | Dev-клиент (замена Expo Go) | AAB | internal |
-| `preview` | Тестирование на устройстве | APK | internal |
-| `production` | Релиз | AAB | store |
+| `preview` | Фокус-группа / тест на устройстве | APK | internal |
+| `production` | Релиз в магазин | AAB | store |
 
-## Команды
+## Фокус-группа: процесс запуска
 
-Все команды — из `apps/mobile/`.
+Полный цикл от нуля до APK в руках тестировщика.
+
+### 1. Накатить схему БД на прод
 
 ```bash
-# Тестовый APK
-eas build --platform android --profile preview
-
-# Dev-клиент
-eas build --platform android --profile development
-
-# OTA-обновление (без пересборки нативного кода)
-eas update --branch preview --message "описание"
+pnpm supabase db push
 ```
 
-## Требования для сборки
+Всегда проверять локально (`pnpm supabase db reset`) перед push.
 
-- `pnpm-lock.yaml` должен быть закоммичен (EAS запускает `--frozen-lockfile`)
-- Корневой `.npmrc` должен содержать `node-linker=hoisted` (совместимость pnpm + Expo autolinking)
-- Android keystore хранится в облаке EAS (не локально)
+### 2. Добавить товары в прод через admin app
 
-## Что не настроено
+Admin app переключается на продакшн через `--mode production`:
 
-- iOS (нет Apple Developer аккаунта)
-- Google Play submit
-- Push notifications (FCM/APNs ключи)
-- CI/CD автозапуск
+```bash
+pnpm --filter admin dev -- --mode production
+```
+
+Vite автоматически загружает `apps/admin/.env.production` вместо `.env`.
+Открываешь `http://localhost:5173` — admin подключён к продакшн Supabase.
+Создаёшь товары, загружаешь фото — всё попадает сразу в прод.
+
+### 3. Собрать APK
+
+```bash
+cd apps/mobile
+eas build --platform android --profile preview
+```
+
+EAS использует `apps/mobile/.env.production` — билд автоматически смотрит на продакшн Supabase.
+Ссылка на скачивание появится на [expo.dev](https://expo.dev) в разделе Builds.
+
+### 4. Раздать тестировщикам
+
+- Поделиться ссылкой с expo.dev (QR или прямая ссылка)
+- Или скачать APK и отправить вручную
+- Тестировщики регистрируются сами в приложении
+
+### OTA-обновление (без пересборки)
+
+Если изменился только JS-код (не нативные модули):
+
+```bash
+cd apps/mobile
+eas update --branch preview --message "что изменилось"
+```
+
+Приложение подтянет обновление при следующем запуске. Пересылать APK не нужно.
 
 ## Переменные окружения
 
@@ -61,27 +90,47 @@ EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<локальный anon key>
 ```
 
-Локальный anon key: `pnpm supabase status` → `anon key`.
+Локальный anon key: `pnpm supabase status` → `ANON_KEY`.
 
 ### `apps/mobile/.env.production` (в git, прод)
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://unpldsztqntzybvnaais.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=<remote anon key>
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 ```
 
-`EXPO_PUBLIC_*` переменные встраиваются в бандл приложения — это намеренно, anon key не является секретом.
-
+`EXPO_PUBLIC_*` встраиваются в бандл — это нормально, anon key не секрет.
 EAS Build автоматически использует `.env.production` для профилей `preview` и `production`.
 
-### Деплой схемы БД
+### `apps/admin/.env` (gitignored, локальная разработка)
 
-```bash
-# Накатить новые миграции на remote
-pnpm supabase db push
+```
+VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_ANON_KEY=<локальный anon key>
 ```
 
-Всегда проверять миграцию локально (`pnpm supabase db reset`) перед push на remote.
+### `apps/admin/.env.production` (в git, прод)
+
+```
+VITE_SUPABASE_URL=https://unpldsztqntzybvnaais.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGci...
+```
+
+Используется только локально через `pnpm --filter admin dev -- --mode production`.
+Admin app не деплоится на хостинг — запускается только локально для управления данными.
+
+## Требования для сборки EAS
+
+- `pnpm-lock.yaml` должен быть закоммичен (EAS запускает `--frozen-lockfile`)
+- Корневой `.npmrc` должен содержать `node-linker=hoisted` (совместимость pnpm + Expo autolinking)
+- Android keystore хранится в облаке EAS (не локально)
+
+## Что не настроено
+
+- iOS (нет Apple Developer аккаунта)
+- Google Play submit
+- Push notifications (FCM/APNs ключи)
+- CI/CD автозапуск
 
 ## Expo MCP Server
 
