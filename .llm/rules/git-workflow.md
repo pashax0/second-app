@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## Branches
 
-- `master` — production-ready only, always deployable
+- `main` — production-ready only, always deployable
 - `p0NN_<name>` — feature branches, numbered sequentially (p011_archive, p012_images, …)
 
 ## Feature completion — ALWAYS in this order
