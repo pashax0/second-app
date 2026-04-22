@@ -84,13 +84,18 @@ _(Repeat 2–4 for each milestone)_
 
 ## End of Session
 
-Before ending any session, update `memory/MEMORY.md`:
-1. Update `## ▶ Next Session Start` — branch, status, ready-to-paste git command
-2. Update `## Roadmap` — mark completed items
-3. Update `## Known Gotchas` — only if a new non-obvious issue was discovered
+Before ending any session, update `docs/session.md` (auto-loaded в CLAUDE.md):
 
-**What belongs in MEMORY.md:** project-specific decisions, domain rules, gotchas, session handoff.
-**What does NOT belong:** tech stack (→ CLAUDE.md), file structure (→ docs/architecture.md), git workflow (→ skill), anything already covered by rules or skills.
+1. `## Open decisions` — что ещё не выбрано / требует решения пользователя
+2. `## Known Gotchas` — только если всплыло новое non-obvious поведение
+
+**What belongs in session.md:** pending decisions, non-obvious gotchas, domain rules, ADR-level handoff.
+**What does NOT belong:**
+- «Что сделано» — авторитетен `git log`, не дублировать
+- Tech stack / commands (→ CLAUDE.md, package.json scripts)
+- File structure (→ docs/architecture.md)
+- Git workflow (→ skill)
+- Всё, что выводится из кода или git — ведёт к двум источникам истины
 
 ---
 

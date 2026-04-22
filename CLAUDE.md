@@ -39,12 +39,6 @@ pnpm --filter mobile web -- --clear
 # Build (EAS)
 cd apps/mobile && eas build --platform android --profile preview
 
-# Test
-pnpm --filter mobile test
-
-# Lint
-pnpm --filter mobile lint
-
 # Type check
 pnpm --filter mobile typecheck
 
@@ -93,3 +87,7 @@ See [docs/architecture.md](docs/architecture.md) for details.
 
 @.llm/context/business.md
 @.llm/context/ux.md
+
+## Session State
+
+@docs/session.md
