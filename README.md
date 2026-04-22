@@ -29,18 +29,18 @@ pnpm seed:storage
 - API URL: http://127.0.0.1:54321
 - Тестовый юзер: `test@test.test` / `test123`
 - Админ: `admin@test.com` / `admin123`
-- Anon key: `pnpm supabase status` → `ANON_KEY`
+- Publishable key: `pnpm supabase status` → `Publishable`
 
 ### 3. Переменные окружения
 
 ```bash
 # Mobile
 cp apps/mobile/.env.example apps/mobile/.env
-# Вставить EXPO_PUBLIC_SUPABASE_URL и EXPO_PUBLIC_SUPABASE_ANON_KEY из `pnpm supabase status`
+# Вставить EXPO_PUBLIC_SUPABASE_URL и EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY из `pnpm supabase status`
 
 # Admin
 cp apps/admin/.env.example apps/admin/.env
-# Вставить VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY из `pnpm supabase status`
+# Вставить VITE_SUPABASE_URL и VITE_SUPABASE_PUBLISHABLE_KEY из `pnpm supabase status`
 ```
 
 ### 4. Запуск
@@ -63,8 +63,6 @@ pnpm --filter admin dev -- --mode production
 ```bash
 # Mobile
 pnpm --filter mobile typecheck   # TypeScript
-pnpm --filter mobile lint        # ESLint
-pnpm --filter mobile test        # Jest
 
 # Admin
 pnpm --filter admin typecheck    # TypeScript

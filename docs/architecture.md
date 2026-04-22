@@ -49,19 +49,27 @@ apps/
         sign-in.tsx
         sign-up.tsx
       (tabs)/             # Main tab navigation
-        index.tsx         # Сегодняшний дроп
-        archive.tsx       # Архив дропов
+        index.tsx         # Витрина (текущий дроп)
+        cart.tsx          # Корзина с таймерами резерваций
         profile.tsx       # Профиль + выход
+      item/
+        [id].tsx          # Карточка товара
       checkout.tsx        # Оформление заказа (modal)
       my-orders.tsx       # История заказов
-      _layout.tsx         # Root layout (auth guard)
+      _layout.tsx         # Root layout (auth guard + providers)
     lib/
       supabase.ts         # Supabase client
       queryKeys.ts        # TanStack Query keys
+      snackbar.tsx        # SnackbarProvider для ошибок
+      grid.ts             # Утилиты сетки витрины
     hooks/
       useActiveDrop.ts    # Активный дроп с товарами
+      useCart.ts          # Корзина (reservations от текущего юзера)
+      useReservations.ts  # Realtime подписка + expiry trigger
     stores/
       auth.ts             # Zustand: сессия пользователя
+    components/
+      RegistrationGateSheet.tsx  # Гейт для анонимных при checkout
 
   admin/                  # Vite/React веб-панель администратора
     src/
@@ -88,7 +96,8 @@ packages/
 supabase/
   migrations/             # SQL миграции (версионированные)
   seed.sql                # Dev seed: тестовый юзер (запускается при db reset)
-  functions/              # Edge Functions (запланировано)
+  seed-images/            # Сиды изображений для Storage (pnpm seed:storage)
+  snippets/               # SQL-заготовки
 ```
 
 ## Key Decisions
@@ -101,15 +110,6 @@ See [decisions/](./decisions/) for Architecture Decision Records.
 
 ## Data Flow
 
-### Ежедневный дроп
-
-```
-pg_cron (Supabase) → Edge Function: schedule-drop
-  → создаёт drop запись в БД
-  → Edge Function: send-notifications
-    → Expo Push API → FCM / APNs → устройства
-```
-
 ### Просмотр товаров
 
 ```
@@ -117,13 +117,29 @@ Mobile App → TanStack Query → Supabase REST API → PostgreSQL
   ← JSON response ← RLS-filtered data
 ```
 
+### Резервации (корзина)
+
+```
+Add to cart → INSERT в reservations (status=reserved, expires_at=+10m)
+  → Realtime publication → WebSocket → все клиенты invalidateQueries
+  → countdown на каждом клиенте → при expires_at==0 → jitter + expire_reservation RPC
+  → DELETE → Realtime → всем видно "доступно"
+  → pg_cron каждые 5 мин как fallback (см. ADR-004)
+```
+
 ### Аутентификация
 
 ```
-Mobile App → Supabase Auth (Email/Password)
-  → JWT session → хранится в SecureStore
-  → автообновление через Supabase JS client
+Mobile App → Supabase Auth (Email/Password или anonymous sign-in)
+  → JWT session → default storage Supabase JS client
+  → автообновление через клиент
 ```
+
+### Ежедневный дроп (не реализовано)
+
+Публикация дропов сейчас вручную через admin. Автоматизация (pg_cron → Edge Function →
+Expo Push → FCM/APNs) — запланирована, но не реализована (нет `supabase/functions/` и
+push-инфраструктуры).
 
 ## External Dependencies
 

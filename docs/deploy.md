@@ -87,33 +87,33 @@ SUPABASE_DB_PASSWORD=...    # пароль БД для db push / db pull
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-EXPO_PUBLIC_SUPABASE_ANON_KEY=<локальный anon key>
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-Локальный anon key: `pnpm supabase status` → `ANON_KEY`.
+Локальный publishable key: `pnpm supabase status` → `Publishable`.
 
 ### `apps/mobile/.env.production` (в git, прод)
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://unpldsztqntzybvnaais.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=eyJhbGci...
 ```
 
-`EXPO_PUBLIC_*` встраиваются в бандл — это нормально, anon key не секрет.
+`EXPO_PUBLIC_*` встраиваются в бандл — это нормально, publishable key не секрет.
 EAS Build автоматически использует `.env.production` для профилей `preview` и `production`.
 
 ### `apps/admin/.env` (gitignored, локальная разработка)
 
 ```
 VITE_SUPABASE_URL=http://127.0.0.1:54321
-VITE_SUPABASE_ANON_KEY=<локальный anon key>
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
 ### `apps/admin/.env.production` (в git, прод)
 
 ```
 VITE_SUPABASE_URL=https://unpldsztqntzybvnaais.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGci...
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGci...
 ```
 
 Используется только локально через `pnpm --filter admin dev -- --mode production`.
@@ -124,6 +124,15 @@ Admin app не деплоится на хостинг — запускается
 - `pnpm-lock.yaml` должен быть закоммичен (EAS запускает `--frozen-lockfile`)
 - Корневой `.npmrc` должен содержать `node-linker=hoisted` (совместимость pnpm + Expo autolinking)
 - Android keystore хранится в облаке EAS (не локально)
+
+## EAS secrets — TODO проверить
+
+> **Перед следующей сборкой прогнать:** `cd apps/mobile && eas secret:list`
+>
+> Если в облаке настроены секреты с именем `EXPO_PUBLIC_SUPABASE_ANON_KEY` —
+> они имеют приоритет над `.env.production` и сломают сборку после ренейма на
+> `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Нужно либо удалить старые
+> (`eas secret:delete`), либо пересоздать под новым именем.
 
 ## Что не настроено
 
