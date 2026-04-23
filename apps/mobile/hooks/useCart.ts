@@ -16,7 +16,7 @@ export type CartItem = {
     brand: string | null;
     price: number;
     status: string;
-    images: { url: string; position: number }[];
+    images: { storage_path: string; position: number }[];
   };
 };
 
@@ -32,7 +32,7 @@ export function useMyCart() {
         .select(`
           id, product_id, drop_id, expires_at,
           product:products(id, name, brand, price, status,
-            images:product_images(url, position)
+            images:product_images(storage_path, position)
           )
         `)
         .eq('user_id', session.user.id)

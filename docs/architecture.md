@@ -71,24 +71,7 @@ apps/
     components/
       RegistrationGateSheet.tsx  # Гейт для анонимных при checkout
 
-  admin/                  # Vite/React веб-панель администратора
-    src/
-      pages/
-        Login.tsx         # /login
-        Products.tsx      # /products (список + delete)
-        CreateProduct.tsx # /products/new
-        Drops.tsx         # /drops (список + публикация)
-        CreateDrop.tsx    # /drops/new
-        DropDetail.tsx    # /drops/:id (аналитика дропа)
-      components/
-        Layout.tsx        # nav + Outlet
-        ProtectedRoute.tsx
-      lib/
-        auth.tsx          # AuthProvider, useAuth
-      App.tsx             # React Router setup
-      main.tsx            # Entry point + QueryClientProvider
-    lib/
-      supabase.ts         # Supabase client
+  admin/                  # Vite/React веб-панель администратора — см. apps/admin/architecture.md
 
 packages/
   shared/                 # placeholder

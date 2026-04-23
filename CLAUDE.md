@@ -73,6 +73,16 @@ supabase/
 
 See [docs/architecture.md](docs/architecture.md) for details.
 
+## Documentation map
+
+- `docs/` — cross-cutting: архитектура монорепо, деплой, ADR, open decisions
+- `apps/<name>/architecture.md` — концепция и границы сервиса
+- `apps/<name>/README.md` — короткий вход в сервис + local dev
+- `.llm/context/` — бизнес и UX (домен, не сервис)
+- `.llm/rules/` — правила разработки
+
+Правило: один факт — один источник. Не дублировать между слоями.
+
 ## Rules
 
 @.llm/rules/behavior.md

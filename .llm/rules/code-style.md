@@ -44,3 +44,10 @@ alwaysApply: true
 - One primary concern per file
 - Keep files under ~300 lines — if longer, consider splitting
 - Imports/dependencies at the top
+
+## Documentation files
+
+- `.md` имена — lowercase (`architecture.md`, `deploy.md`, `session.md`)
+- Исключения по конвенции инструментария: `README.md`, `CLAUDE.md`
+- Именованные паттерны: `ADR-*.md`, `SKILL.md`
+- Перед созданием нового `.md` — посмотреть на существующие и повторить стиль; не смешивать регистры в одной категории

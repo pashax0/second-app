@@ -10,7 +10,7 @@
 
 1. **Focus-group Android release** — playbook в [deploy.md](deploy.md). Первый APK тестировщикам.
 2. **Push notifications** — помечено «не реализовано» в [architecture.md](architecture.md) и [deploy.md](deploy.md). Нужны FCM ключи.
-3. **Admin: Orders page** — при COD нет интерфейса для обработки заказов в админке.
+3. **Admin panel expansion** — Orders / Users / Settings. Приоритеты — [apps/admin/architecture.md](../apps/admin/architecture.md#roadmap).
 
 ## Known Gotchas
 

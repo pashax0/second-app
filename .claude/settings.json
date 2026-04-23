@@ -1,23 +1,91 @@
 {
   "autoMemoryEnabled": true,
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "# TODO: add your lint/format command here"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
-      "Bash(git status)",
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "WebFetch",
+      "WebSearch",
+
+      "Bash(git status*)",
       "Bash(git diff*)",
-      "Bash(git log*)"
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git show*)",
+      "Bash(git blame*)",
+      "Bash(git ls-files*)",
+      "Bash(git remote -v*)",
+      "Bash(git config --get*)",
+
+      "Bash(git add*)",
+      "Bash(git restore*)",
+      "Bash(git stash*)",
+
+      "Bash(ls*)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(wc *)",
+      "Bash(file *)",
+      "Bash(stat *)",
+      "Bash(tree *)",
+      "Bash(lsof *)",
+      "Bash(which *)",
+
+      "Bash(pnpm install*)",
+      "Bash(pnpm i)",
+      "Bash(pnpm --filter mobile *)",
+      "Bash(pnpm --filter admin *)",
+      "Bash(pnpm typecheck*)",
+      "Bash(pnpm build*)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm lint*)",
+      "Bash(pnpm dev*)",
+      "Bash(pnpm web*)",
+      "Bash(pnpm seed:*)",
+
+      "Bash(pnpm supabase start*)",
+      "Bash(pnpm supabase stop*)",
+      "Bash(pnpm supabase status*)",
+      "Bash(pnpm supabase db reset*)",
+      "Bash(pnpm supabase db diff*)",
+      "Bash(pnpm supabase migration list*)",
+      "Bash(pnpm supabase migration new*)",
+
+      "Bash(kill $(lsof -ti:8081)*)",
+      "Bash(kill $(lsof -ti:5173)*)",
+      "Bash(kill $(lsof -ti:54321)*)",
+      "Bash(kill $(lsof -ti:54322)*)",
+      "Bash(kill $(lsof -ti:54323)*)",
+      "Bash(kill $(lsof -ti:54324)*)",
+
+      "Bash(curl -s http://localhost*)",
+      "Bash(curl -s http://127.0.0.1*)",
+      "Bash(curl -sL http://localhost*)",
+      "Bash(curl -sL http://127.0.0.1*)",
+
+      "Bash(eas secret:list*)",
+
+      "mcp__supabase-cloud__list_projects",
+      "mcp__supabase-cloud__list_organizations",
+      "mcp__supabase-cloud__list_tables",
+      "mcp__supabase-cloud__list_extensions",
+      "mcp__supabase-cloud__list_migrations",
+      "mcp__supabase-cloud__list_branches",
+      "mcp__supabase-cloud__list_edge_functions",
+      "mcp__supabase-cloud__get_project",
+      "mcp__supabase-cloud__get_organization",
+      "mcp__supabase-cloud__get_project_url",
+      "mcp__supabase-cloud__get_publishable_keys",
+      "mcp__supabase-cloud__get_logs",
+      "mcp__supabase-cloud__get_advisors",
+      "mcp__supabase-cloud__get_cost",
+      "mcp__supabase-cloud__get_edge_function",
+      "mcp__supabase-cloud__search_docs",
+      "mcp__supabase-cloud__generate_typescript_types"
     ],
     "deny": [
       "Bash(git commit*)",
@@ -25,7 +93,49 @@
       "Bash(git rebase*)",
       "Bash(git reset*)",
       "Bash(git checkout*)",
-      "Bash(git merge*)"
+      "Bash(git switch*)",
+      "Bash(git merge*)",
+      "Bash(git clean*)",
+      "Bash(git worktree*)",
+
+      "Bash(rm *)",
+      "Bash(sudo *)",
+      "Bash(mv /*)",
+
+      "Bash(pnpm add*)",
+      "Bash(pnpm remove*)",
+      "Bash(pnpm uninstall*)",
+      "Bash(npm install*)",
+      "Bash(npm add*)",
+      "Bash(yarn add*)",
+
+      "Bash(pnpm supabase db push*)",
+      "Bash(pnpm supabase db pull*)",
+      "Bash(pnpm supabase functions deploy*)",
+      "Bash(pnpm supabase secrets *)",
+      "Bash(pnpm supabase link*)",
+
+      "Bash(eas build*)",
+      "Bash(eas submit*)",
+      "Bash(eas update*)",
+      "Bash(eas secret:create*)",
+      "Bash(eas secret:delete*)",
+
+      "Edit(**/.env*)",
+      "Write(**/.env*)",
+      "Edit(**/CLAUDE.local.md)",
+      "Write(**/CLAUDE.local.md)",
+      "Edit(.claude/settings.local.json)",
+      "Write(.claude/settings.local.json)",
+      "Edit(**/*.pem)",
+      "Write(**/*.pem)",
+      "Edit(**/*.key)",
+      "Write(**/*.key)",
+
+      "Edit(node_modules/**)",
+      "Write(node_modules/**)",
+      "Edit(.git/**)",
+      "Write(.git/**)"
     ]
   }
 }

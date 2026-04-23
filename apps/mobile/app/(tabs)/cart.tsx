@@ -29,8 +29,12 @@ function useCountdown(expiresAt: string): string {
 
 export default function CartScreen() {
   const { user, isAnonymous } = useAuthStore();
-  const { data: items, isLoading } = useMyCart();
+  const { data: items, isLoading, error } = useMyCart();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (error) console.error('[cart] failed to load reservations:', error);
+  }, [error]);
 
   // Refresh cart when tab becomes focused (e.g. after signing in)
   useEffect(() => {
@@ -79,6 +83,21 @@ export default function CartScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white px-8">
+        <Text className="text-2xl font-bold text-gray-900 mb-2">Не удалось загрузить корзину</Text>
+        <Text className="text-gray-500 text-center mb-6">Проверьте соединение и попробуйте снова</Text>
+        <Pressable
+          className="bg-gray-900 rounded-full px-8 py-3"
+          onPress={() => queryClient.invalidateQueries({ queryKey: queryKeys.reservations.mine() })}
+        >
+          <Text className="text-white font-semibold">Повторить</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   if (!items || items.length === 0) {
     return (
       <View className="flex-1 items-center justify-center bg-white px-8">
@@ -112,7 +131,10 @@ export default function CartScreen() {
 function CartRow({ item, isAnonymous }: { item: CartItem; isAnonymous: boolean }) {
   const countdown = useCountdown(item.expires_at);
   const { mutate: remove, isPending: isRemoving } = useRemoveFromCart();
-  const imageUrl = item.product.images[0]?.url;
+  const firstImage = item.product.images[0];
+  const imageUrl = firstImage
+    ? supabase.storage.from('product-images').getPublicUrl(firstImage.storage_path).data.publicUrl
+    : null;
 
   return (
     <View className="flex-row items-center px-4 py-3 gap-3">
