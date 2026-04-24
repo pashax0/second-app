@@ -33,7 +33,7 @@
 pnpm install
 
 # --- Mobile ---
-# Dev (web — основной режим разработки, SDK 55 несовместим с Expo Go)
+# Dev (web — основной режим разработки; Expo Go для проверки с телефона)
 pnpm --filter mobile web -- --clear
 
 # Build (EAS)

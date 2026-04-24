@@ -12,5 +12,10 @@
   },
   "devDependencies": {
     "supabase": "^2.77.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "dnssd-advertise": "^1.1.4"
+    }
   }
 }
