@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Products from './pages/Products'
 import CreateProduct from './pages/CreateProduct'
+import EditProduct from './pages/EditProduct'
 import Drops from './pages/Drops'
 import CreateDrop from './pages/CreateDrop'
 import DropDetail from './pages/DropDetail'
@@ -24,6 +25,7 @@ export default function App() {
           >
             <Route path="/products" element={<Products />} />
             <Route path="/products/new" element={<CreateProduct />} />
+            <Route path="/products/:id/edit" element={<EditProduct />} />
             <Route path="/drops" element={<Drops />} />
             <Route path="/drops/new" element={<CreateDrop />} />
             <Route path="/drops/:id" element={<DropDetail />} />

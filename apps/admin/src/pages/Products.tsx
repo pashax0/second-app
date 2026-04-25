@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { useRealtimeInvalidation } from '../lib/useRealtimeInvalidation'
 
 interface ProductImage {
   storage_path: string
@@ -13,19 +14,56 @@ interface Product {
   name: string
   brand: string | null
   size: string | null
+  item_number: string | null
   price: number
   status: 'draft' | 'available' | 'sold'
   product_images: ProductImage[]
 }
 
-async function fetchProducts(): Promise<Product[]> {
-  const { data, error } = await supabase
+type Tab = 'all' | 'draft' | 'available' | 'sold'
+
+const PAGE_SIZE = 30
+
+interface ProductsQuery {
+  tab: Tab
+  search: string
+  page: number
+}
+
+interface ProductsResult {
+  rows: Product[]
+  total: number
+}
+
+async function fetchProducts({ tab, search, page }: ProductsQuery): Promise<ProductsResult> {
+  let query = supabase
     .from('products')
-    .select('id, name, brand, size, price, status, product_images(storage_path, position)')
+    .select(
+      'id, name, brand, size, item_number, price, status, product_images(storage_path, position)',
+      { count: 'exact' },
+    )
     .order('created_at', { ascending: false })
 
+  if (tab === 'all') query = query.neq('status', 'sold')
+  else query = query.eq('status', tab)
+
+  const term = search.trim()
+  if (term) {
+    const like = `%${term}%`
+    query = query.or(
+      `name.ilike.${like},brand.ilike.${like},item_number.ilike.${like}`,
+    )
+  }
+
+  const from = page * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+  const { data, error, count } = await query.range(from, to)
+
   if (error) throw error
-  return (data ?? []) as unknown as Product[]
+  return {
+    rows: (data ?? []) as unknown as Product[],
+    total: count ?? 0,
+  }
 }
 
 async function deleteProduct(id: string) {
@@ -45,14 +83,60 @@ const STATUS_CLS: Record<Product['status'], string> = {
   sold: 'bg-red-100 text-red-600',
 }
 
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'available', label: 'Available' },
+  { value: 'sold', label: 'Sold' },
+]
+
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(id)
+  }, [value, delay])
+  return debounced
+}
+
 export default function Products() {
   const queryClient = useQueryClient()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>('all')
+  const [searchInput, setSearchInput] = useState('')
+  const search = useDebounced(searchInput, 300)
+  const [page, setPage] = useState(0)
 
-  const { data: products = [], isLoading, error } = useQuery({
-    queryKey: ['products'],
-    queryFn: fetchProducts,
+  useEffect(() => {
+    setPage(0)
+  }, [tab, search])
+
+  const queryKey = useMemo(
+    () => ['products', { tab, search, page }] as const,
+    [tab, search, page],
+  )
+
+  const { data, isLoading, error, isFetching } = useQuery({
+    queryKey,
+    queryFn: () => fetchProducts({ tab, search, page }),
+    placeholderData: keepPreviousData,
   })
+
+  useRealtimeInvalidation(
+    [
+      { table: 'products' },
+      { table: 'drop_items' },
+      { table: 'reservations' },
+      { table: 'product_images' },
+    ],
+    [['products']],
+  )
+
+  const rows = data?.rows ?? []
+  const total = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const rangeFrom = total === 0 ? 0 : page * PAGE_SIZE + 1
+  const rangeTo = Math.min(total, page * PAGE_SIZE + rows.length)
 
   const deleteMutation = useMutation({
     mutationFn: deleteProduct,
@@ -81,17 +165,46 @@ export default function Products() {
         </Link>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div role="tablist" className="inline-flex rounded border border-gray-200 overflow-hidden">
+          {TABS.map((t) => {
+            const active = tab === t.value
+            return (
+              <button
+                key={t.value}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(t.value)}
+                className={`px-3 py-1.5 text-sm border-r border-gray-200 last:border-r-0 ${
+                  active ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
+
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search by name, brand or #"
+          className="flex-1 min-w-[220px] border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+        />
+      </div>
+
       {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
 
       {error && (
         <p className="text-sm text-red-600">{(error as Error).message}</p>
       )}
 
-      {!isLoading && !error && products.length === 0 && (
-        <p className="text-sm text-gray-500">No products yet.</p>
+      {!isLoading && !error && rows.length === 0 && (
+        <p className="text-sm text-gray-500">No products match your filters.</p>
       )}
 
-      {products.length > 0 && (
+      {rows.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -105,7 +218,7 @@ export default function Products() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {products.map((p) => {
+              {rows.map((p) => {
                 const thumb = [...p.product_images]
                   .sort((a, b) => a.position - b.position)[0]
 
@@ -134,7 +247,13 @@ export default function Products() {
                         {STATUS_LABEL[p.status]}
                       </span>
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 text-right whitespace-nowrap">
+                      <Link
+                        to={`/products/${p.id}/edit`}
+                        className="text-xs text-gray-600 hover:text-gray-900 mr-3"
+                      >
+                        Edit
+                      </Link>
                       {p.status === 'draft' && (
                         <button
                           onClick={() => handleDelete(p.id)}
@@ -150,6 +269,31 @@ export default function Products() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+          <span>
+            {rangeFrom}–{rangeTo} of {total}
+            {isFetching && <span className="ml-2 text-gray-400">updating…</span>}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-3 py-1 border border-gray-300 rounded disabled:opacity-40 hover:bg-gray-50"
+            >
+              Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+              disabled={page >= pageCount - 1}
+              className="px-3 py-1 border border-gray-300 rounded disabled:opacity-40 hover:bg-gray-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { queryKeys } from '../lib/queryKeys';
+import { useRealtimeInvalidation } from './useRealtimeInvalidation';
 
 export type Measurements = {
   chest?: number | null;
@@ -97,8 +98,20 @@ async function fetchActiveDrop(): Promise<ActiveDrop | null> {
 }
 
 export function useActiveDrop() {
-  return useQuery({
+  const query = useQuery({
     queryKey: queryKeys.drops.active(),
     queryFn: fetchActiveDrop,
   });
+
+  useRealtimeInvalidation(
+    [
+      { table: 'drops' },
+      { table: 'drop_items' },
+      { table: 'products' },
+      { table: 'product_images' },
+    ],
+    [queryKeys.drops.active()]
+  );
+
+  return query;
 }
