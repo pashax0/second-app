@@ -96,6 +96,7 @@ See [docs/architecture.md](docs/architecture.md) for details.
 ## Context
 
 @.llm/context/business.md
+@.llm/context/product-lifecycle.md
 @.llm/context/ux.md
 
 ## Session State
