@@ -2,6 +2,7 @@
 CLAUDE.local.md
 .claude/settings.local.json
 memory/
+.playwright-mcp/
 
 # Dependencies
 node_modules/

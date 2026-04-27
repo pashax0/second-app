@@ -16,11 +16,11 @@ interface Product {
   size: string | null
   item_number: string | null
   price: number
-  status: 'draft' | 'available' | 'sold'
+  status: 'in_stock' | 'listed' | 'sold' | 'written_off'
   product_images: ProductImage[]
 }
 
-type Tab = 'all' | 'draft' | 'available' | 'sold'
+type Tab = 'all' | 'in_stock' | 'listed' | 'sold' | 'written_off'
 
 const PAGE_SIZE = 30
 
@@ -44,7 +44,7 @@ async function fetchProducts({ tab, search, page }: ProductsQuery): Promise<Prod
     )
     .order('created_at', { ascending: false })
 
-  if (tab === 'all') query = query.neq('status', 'sold')
+  if (tab === 'all') query = query.not('status', 'in', '(sold,written_off)')
   else query = query.eq('status', tab)
 
   const term = search.trim()
@@ -72,22 +72,25 @@ async function deleteProduct(id: string) {
 }
 
 const STATUS_LABEL: Record<Product['status'], string> = {
-  draft: 'Draft',
-  available: 'Available',
+  in_stock: 'In stock',
+  listed: 'Listed',
   sold: 'Sold',
+  written_off: 'Written off',
 }
 
 const STATUS_CLS: Record<Product['status'], string> = {
-  draft: 'bg-gray-100 text-gray-600',
-  available: 'bg-green-100 text-green-700',
+  in_stock: 'bg-gray-100 text-gray-600',
+  listed: 'bg-green-100 text-green-700',
   sold: 'bg-red-100 text-red-600',
+  written_off: 'bg-gray-200 text-gray-500',
 }
 
 const TABS: { value: Tab; label: string }[] = [
   { value: 'all', label: 'All' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'available', label: 'Available' },
+  { value: 'in_stock', label: 'In stock' },
+  { value: 'listed', label: 'Listed' },
   { value: 'sold', label: 'Sold' },
+  { value: 'written_off', label: 'Written off' },
 ]
 
 function useDebounced<T>(value: T, delay = 300): T {
@@ -254,7 +257,7 @@ export default function Products() {
                       >
                         Edit
                       </Link>
-                      {p.status === 'draft' && (
+                      {p.status === 'in_stock' && (
                         <button
                           onClick={() => handleDelete(p.id)}
                           disabled={deletingId === p.id}

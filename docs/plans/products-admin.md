@@ -51,6 +51,10 @@
 - Add: drop zone снизу grid'а
 - Транзакционность: новые фото аплоадятся перед коммитом. При ошибке — откатываем уже загруженные.
 
+## Конвенция миграций (на время разработки)
+
+Пока приложение в разработке и нет данных для сохранения — миграции трактуем как «способ применить схему», а не immutable history. Базовые файлы (`20260308000000_initial_schema.sql`, `…002_rls_policies.sql`, `…003_seed_dev_data.sql`, `…004_create_order_fn.sql`) правим напрямую; временные «patch»-миграции не плодим. Применяем через `pnpm supabase db reset` + `pnpm seed:storage`. Это касается всех под-шагов 8.x и далее: новые DDL/RPC/RLS/view добавляем в соответствующие базовые файлы (или одной новой миграцией, если concern явно отдельный — например, RPC-функции lifecycle). Поддержка старых типов и фолбеки не нужны.
+
 ## План имплементации (атомарные шаги)
 
 | # | Шаг | Verify |
@@ -64,7 +68,19 @@
 | 6.5 | «Добавить на витрину» (зеркало withdraw) на EditProduct | Playwright: in_stock + active drop → клик → статус listed, drop_items row создан |
 | 6.75 | Live-сигналы: миграция publications + `useRealtimeInvalidation` (admin + mobile) | Playwright: SQL update из другой сессии → UI обновился без reload |
 | 7 | Lifecycle spec — единый док [product-lifecycle.md](../../.llm/context/product-lifecycle.md) (статусы, переходы, связанные таблицы, what-not-to-model) | Документ согласован; business.md и CLAUDE.md обновлены |
-| 8 | Имплементация lifecycle (см. [product-lifecycle.md](../../.llm/context/product-lifecycle.md), секция «MVP scope»). Под-шаги: 8.1 миграция БД (rename статусов, новые поля, новые таблицы); 8.2 RPC + триггеры + view + RLS column-deny; 8.3 backfill; 8.4 admin-код переход на RPC + view + новые имена UI; 8.5 mobile types/queries; 8.6 sync [apps/admin/architecture.md](../../apps/admin/architecture.md) | Playwright: try прямой UPDATE products.status — отказ; через RPC — переход; mobile витрина читается из view; вкладки админки используют новые имена |
+| 8 | Имплементация lifecycle. Спека — [product-lifecycle.md](../../.llm/context/product-lifecycle.md). Под-шаги ниже. | — |
+| 8.1 | Миграция: новые поля `products.{cost, list_price, condition, defect_notes, lot_id, deleted_at}`, `drops.discount_percent`, `orders.{cancellation_reason, cancellation_notes}` и новые таблицы `supply_lots`, `returns`, `write_offs` (additive) | Миграция применяется на чистой БД и на текущей; существующий код не сломан |
+| 8.2 | Миграция: backfill `list_price = price` для существующих товаров | Нет товаров с `list_price IS NULL` |
+| 8.3 | Миграция: RPC-функции (`publish_product`, `withdraw_product`, `activate_drop`, `archive_drop`, `complete_order`, `cancel_order`, `process_return`, `complete_return_inspection`, `write_off_product`, `delete_product`) | Каждая RPC отрабатывает «happy path» и блокирует невалидные кейсы |
+| 8.4 | Миграция: триггеры на `drop_items`, `drops`, `orders` (guard rails) | Прямой `INSERT drop_items` или `UPDATE drops.status` корректно автосинкает `products.status` |
+| 8.5 | Миграция: RLS column-deny на `products.status` для `authenticated` | Прямой `UPDATE products SET status=...` отвергнут; через RPC проходит |
+| 8.6 | Миграция: view `products_with_flags` (is_scheduled, is_returned_to_stock, is_in_cart, has_pending_return) | SELECT возвращает корректные флаги на seed |
+| 8.7 | Миграция: rename статусов (`products`: `draft→in_stock`, `available→listed`, добавлен `written_off`; `drops`: `draft→scheduled`) | Существующие записи переехали; check-constraints обновлены |
+| 8.8 | Admin: мутации статуса переведены на RPC, запросы списка — на view, UI-имена статусов и табов переименованы | Playwright: withdraw/publish работают; вкладки показывают новые имена; прямого UPDATE статуса в коде нет |
+| 8.9 | Admin: новые поля (cost, list_price, condition, defect_notes, lot) в `ProductForm` | Playwright: create/edit сохраняет новые поля |
+| 8.10 | Admin: composite в UI (бейджи/sub-фильтры Scheduled, Returned, In cart, Pending return) | Playwright: товар с резервацией показывает бейдж «In cart» и попадает в фильтр |
+| 8.11 | Mobile: типы и запросы переведены на новые имена (и view там, где нужны composite) | `pnpm --filter mobile typecheck` чисто; web-витрина грузится без регрессий |
+| 8.12 | Docs sync: [apps/admin/architecture.md](../../apps/admin/architecture.md), README, комментарии в коде | Grep `draft/available` в коде возвращает только intentional historical mentions |
 
 После каждого шага: stop, report, ждём подтверждения перед следующим.
 
@@ -93,4 +109,13 @@
 - [x] Шаг 6.5: Publish to active drop
 - [x] Шаг 6.75: Live-сигналы (admin + mobile)
 - [x] Шаг 7: Lifecycle spec — [.llm/context/product-lifecycle.md](../../.llm/context/product-lifecycle.md)
-- [ ] Шаг 8: Имплементация lifecycle (миграция + код + composite UI)
+- [x] Шаг 8.1 + 8.2 + 8.7: новые поля/таблицы, list_price, rename статусов — сложены в базовые миграции (`…000_initial_schema`, `…002_rls_policies`, `…003_seed_dev_data`, `…004_create_order_fn`). Код admin/mobile переведён на новые литералы (`in_stock`/`listed`/`written_off`, `scheduled`). UI-имена статусов и табов в Products переименованы заодно.
+- [ ] Шаг 8.3: RPC функции lifecycle
+- [ ] Шаг 8.4: Триггеры (guard rails)
+- [ ] Шаг 8.5: RLS column-deny на products.status
+- [ ] Шаг 8.6: View products_with_flags
+- [ ] Шаг 8.8: Admin — RPC + view (то, что осталось после 8.7)
+- [ ] Шаг 8.9: Admin — новые поля в ProductForm
+- [ ] Шаг 8.10: Admin — composite в UI
+- [ ] Шаг 8.11: Mobile — composite-запросы (типы уже переведены)
+- [ ] Шаг 8.12: Docs sync

@@ -42,7 +42,7 @@ export default function CreateProduct() {
         description: values.description || null,
         item_number: values.item_number || null,
         stock_quantity: 1,
-        status: 'draft',
+        status: 'in_stock',
       })
       .select('id')
       .single()

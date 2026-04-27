@@ -7,6 +7,9 @@ alter table public.drop_items enable row level security;
 alter table public.reservations enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
+alter table public.supply_lots enable row level security;
+alter table public.returns enable row level security;
+alter table public.write_offs enable row level security;
 
 -- Helper: is the current user an admin?
 -- Used in policies to avoid repeating the subquery.
@@ -119,6 +122,34 @@ create policy "order_items: authenticated insert" on public.order_items
         and orders.user_id = auth.uid()
     )
   );
+
+-- supply_lots / returns / write_offs: admin-only (mobile app does not read these)
+create policy "supply_lots: admin read" on public.supply_lots
+  for select using (public.is_admin());
+create policy "supply_lots: admin insert" on public.supply_lots
+  for insert with check (public.is_admin());
+create policy "supply_lots: admin update" on public.supply_lots
+  for update using (public.is_admin());
+create policy "supply_lots: admin delete" on public.supply_lots
+  for delete using (public.is_admin());
+
+create policy "returns: admin read" on public.returns
+  for select using (public.is_admin());
+create policy "returns: admin insert" on public.returns
+  for insert with check (public.is_admin());
+create policy "returns: admin update" on public.returns
+  for update using (public.is_admin());
+create policy "returns: admin delete" on public.returns
+  for delete using (public.is_admin());
+
+create policy "write_offs: admin read" on public.write_offs
+  for select using (public.is_admin());
+create policy "write_offs: admin insert" on public.write_offs
+  for insert with check (public.is_admin());
+create policy "write_offs: admin update" on public.write_offs
+  for update using (public.is_admin());
+create policy "write_offs: admin delete" on public.write_offs
+  for delete using (public.is_admin());
 
 -- Storage: product images bucket
 insert into storage.buckets (id, name, public)

@@ -30,7 +30,7 @@ interface Product {
   description: string | null
   item_number: string | null
   measurements: Measurements | null
-  status: 'draft' | 'available' | 'sold'
+  status: 'in_stock' | 'listed' | 'sold' | 'written_off'
   product_images: ProductImage[]
 }
 
@@ -326,7 +326,7 @@ export default function EditProduct() {
 
       const { error: updErr } = await supabase
         .from('products')
-        .update({ status: 'available' })
+        .update({ status: 'listed' })
         .eq('id', id)
       if (updErr) throw updErr
 
@@ -343,7 +343,7 @@ export default function EditProduct() {
   async function handleWithdraw() {
     if (!id || !activeDropItem) return
     if (reservation) return
-    if (!confirm('Убрать этот товар с витрины? Он вернётся в Draft.')) return
+    if (!confirm('Убрать этот товар с витрины? Он вернётся в In stock.')) return
 
     setWithdrawError(null)
     setWithdrawing(true)
@@ -357,7 +357,7 @@ export default function EditProduct() {
 
       const { error: updErr } = await supabase
         .from('products')
-        .update({ status: 'draft' })
+        .update({ status: 'in_stock' })
         .eq('id', id)
       if (updErr) throw updErr
 
@@ -396,7 +396,7 @@ export default function EditProduct() {
     <div className="max-w-xl">
       <div className="flex items-start justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
-        {product.status === 'available' && activeDropItem && (
+        {product.status === 'listed' && activeDropItem && (
           <button
             type="button"
             onClick={handleWithdraw}
@@ -407,7 +407,7 @@ export default function EditProduct() {
             {withdrawing ? 'Убираем…' : 'Убрать с витрины'}
           </button>
         )}
-        {product.status === 'draft' && activeDrop && (
+        {product.status === 'in_stock' && activeDrop && (
           <button
             type="button"
             onClick={handlePublish}
@@ -417,7 +417,7 @@ export default function EditProduct() {
             {publishing ? 'Публикуем…' : 'Добавить на витрину'}
           </button>
         )}
-        {product.status === 'draft' && !activeDrop && (
+        {product.status === 'in_stock' && !activeDrop && (
           <span className="shrink-0 text-xs text-gray-500 self-center">
             Нет активного дропа
           </span>

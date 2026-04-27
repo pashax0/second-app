@@ -30,7 +30,7 @@ begin
     raise exception 'product_not_in_drop';
   end if;
 
-  if v_status <> 'available' then
+  if v_status <> 'listed' then
     raise exception 'out_of_stock';
   end if;
 

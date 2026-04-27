@@ -10,7 +10,21 @@ create table public.profiles (
   updated_at  timestamptz not null default now()
 );
 
+-- supply_lots: purchase batch ("50 items for £400 from supplier X in UK")
+create table public.supply_lots (
+  id              uuid primary key default gen_random_uuid(),
+  source_country  text,
+  supplier        text,
+  total_cost      numeric(10,2),
+  item_count      int,
+  received_at     date,
+  notes           text,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
 -- products
+-- See .llm/context/product-lifecycle.md for status semantics.
 create table public.products (
   id              uuid primary key default gen_random_uuid(),
   name            text not null,
@@ -20,15 +34,22 @@ create table public.products (
   size            text,
   measurements    jsonb,          -- {"chest":50,"waist":null,"hips":null,"length":70}
   item_number     text,           -- internal shop number, e.g. "202"
+  cost            numeric(10,2),  -- per-item cost (override of supply_lot.total_cost / item_count)
+  list_price      numeric(10,2),  -- original price at first listing
   price           numeric(10,2) not null,
   stock_quantity  int not null default 0,
-  -- draft: created, not in active drop
-  -- available: in active drop, purchasable
-  -- sold: purchased
-  status          text not null default 'draft' check (status in ('draft', 'available', 'sold')),
+  condition       text check (condition in ('new_with_tags','excellent','good','has_defect')),
+  defect_notes    text,
+  lot_id          uuid references public.supply_lots(id) on delete set null,
+  status          text not null default 'in_stock'
+                  check (status in ('in_stock', 'listed', 'sold', 'written_off')),
+  deleted_at      timestamptz,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+
+create index on public.products (lot_id);
+create index on public.products (deleted_at);
 
 -- product_images: multiple photos per product
 create table public.product_images (
@@ -43,15 +64,17 @@ create index on public.product_images (product_id, position);
 
 -- drops: a daily drop event
 create table public.drops (
-  id            uuid primary key default gen_random_uuid(),
-  title         text,
-  description   text,           -- optional header shown above the item grid
-  scheduled_at  timestamptz not null,
-  published_at  timestamptz,
-  -- draft → active → archived
-  status        text not null default 'draft' check (status in ('draft', 'active', 'archived')),
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  id                uuid primary key default gen_random_uuid(),
+  title             text,
+  description       text,           -- optional header shown above the item grid
+  scheduled_at      timestamptz not null,
+  published_at      timestamptz,
+  discount_percent  numeric(5,2) check (discount_percent is null or (discount_percent > 0 and discount_percent < 100)),
+  -- scheduled → active → archived
+  status            text not null default 'scheduled'
+                    check (status in ('scheduled', 'active', 'archived')),
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
 );
 
 -- drop_items: which products are in a drop, with optional price override
@@ -85,13 +108,18 @@ create index on public.reservations (user_id);
 
 -- orders
 create table public.orders (
-  id                uuid primary key default gen_random_uuid(),
-  user_id           uuid not null references auth.users(id),
-  drop_id           uuid references public.drops(id),
-  status            text not null default 'pending' check (status in ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
-  delivery_address  text not null,
-  created_at        timestamptz not null default now(),
-  updated_at        timestamptz not null default now()
+  id                    uuid primary key default gen_random_uuid(),
+  user_id               uuid not null references auth.users(id),
+  drop_id               uuid references public.drops(id),
+  status                text not null default 'pending' check (status in ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
+  delivery_address      text not null,
+  cancellation_reason   text check (cancellation_reason is null or cancellation_reason in (
+                          'customer_request','no_show','damaged_in_transit',
+                          'admin_withdraw','out_of_stock','other'
+                        )),
+  cancellation_notes    text,
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now()
 );
 
 create index on public.orders (user_id);
@@ -107,6 +135,38 @@ create table public.order_items (
 );
 
 create index on public.order_items (order_id);
+
+-- returns: customer return of a sold product, awaiting inspection
+create table public.returns (
+  id                uuid primary key default gen_random_uuid(),
+  order_item_id     uuid not null references public.order_items(id) on delete restrict,
+  product_id        uuid not null references public.products(id) on delete restrict,
+  reason            text not null check (reason in ('size','quality','color','changed_mind','other')),
+  inspection_status text not null default 'pending'
+                    check (inspection_status in ('pending','relisted','written_off')),
+  refund_amount     numeric(10,2),
+  notes             text,
+  returned_at       timestamptz not null default now(),
+  inspected_at      timestamptz,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+create index on public.returns (product_id);
+create index on public.returns (order_item_id);
+create index on public.returns (inspection_status);
+
+-- write_offs: audit log for items removed from inventory without a sale
+create table public.write_offs (
+  id              uuid primary key default gen_random_uuid(),
+  product_id      uuid not null references public.products(id) on delete restrict,
+  reason          text not null check (reason in ('damaged','lost','personal','other')),
+  notes           text,
+  written_off_at  timestamptz not null default now(),
+  created_at      timestamptz not null default now()
+);
+
+create index on public.write_offs (product_id);
 
 -- auto-update updated_at
 create or replace function public.set_updated_at()
@@ -124,6 +184,10 @@ create trigger set_updated_at before update on public.products
 create trigger set_updated_at before update on public.drops
   for each row execute function public.set_updated_at();
 create trigger set_updated_at before update on public.orders
+  for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on public.supply_lots
+  for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on public.returns
   for each row execute function public.set_updated_at();
 
 -- Enable Realtime for reservations (needed for live cart/timer updates across browsers)

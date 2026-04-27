@@ -15,7 +15,7 @@ export type ProductImage = {
   position: number;
 };
 
-export type ProductStatus = 'draft' | 'available' | 'sold';
+export type ProductStatus = 'in_stock' | 'listed' | 'sold' | 'written_off';
 
 export type DropProduct = {
   id: string;

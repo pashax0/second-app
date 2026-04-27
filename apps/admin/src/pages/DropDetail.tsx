@@ -8,7 +8,7 @@ interface Drop {
   id: string
   title: string | null
   description: string | null
-  status: 'draft' | 'active' | 'archived'
+  status: 'scheduled' | 'active' | 'archived'
   published_at: string | null
 }
 
@@ -27,7 +27,7 @@ interface DropItemRow {
     brand: string | null
     size: string | null
     price: number
-    status: 'draft' | 'available' | 'sold'
+    status: 'in_stock' | 'listed' | 'sold' | 'written_off'
     product_images: ProductImage[]
   }
 }
@@ -95,12 +95,12 @@ async function fetchReservations(productIds: string[]): Promise<ReservationRow[]
 // ── Item status logic ─────────────────────────────────────────────────────────
 
 type DisplayStatus =
-  | { kind: 'available' }
+  | { kind: 'listed' }
   | { kind: 'reserved'; expiresAt: string }
   | { kind: 'sold_here'; price: number }
   | { kind: 'sold_elsewhere' }
   | { kind: 'withdrawn' }
-  | { kind: 'draft' }
+  | { kind: 'returned' }
 
 function resolveStatus(
   item: DropItemRow,
@@ -122,35 +122,35 @@ function resolveStatus(
     return { kind: 'sold_elsewhere' }
   }
 
-  if (status === 'available') {
+  if (status === 'listed') {
     const res = reservationMap.get(pid)
-    return res ? { kind: 'reserved', expiresAt: res.expires_at } : { kind: 'available' }
+    return res ? { kind: 'reserved', expiresAt: res.expires_at } : { kind: 'listed' }
   }
 
-  // draft: was in this drop but not sold when archived
-  return { kind: 'withdrawn' }
+  // in_stock here = was in this drop but not sold when archived
+  return { kind: 'returned' }
 }
 
 const STATUS_LABEL: Record<DisplayStatus['kind'], string> = {
-  available: 'Available',
+  listed: 'Listed',
   reserved: 'Reserved',
   sold_here: 'Sold here',
   sold_elsewhere: 'Sold elsewhere',
   withdrawn: 'Withdrawn',
-  draft: 'Draft',
+  returned: 'Returned',
 }
 
 const STATUS_CLS: Record<DisplayStatus['kind'], string> = {
-  available: 'bg-green-100 text-green-700',
+  listed: 'bg-green-100 text-green-700',
   reserved: 'bg-yellow-100 text-yellow-700',
   sold_here: 'bg-blue-100 text-blue-700',
   sold_elsewhere: 'bg-gray-100 text-gray-400',
   withdrawn: 'bg-gray-100 text-gray-400',
-  draft: 'bg-gray-100 text-gray-400',
+  returned: 'bg-gray-100 text-gray-400',
 }
 
 const DROP_STATUS_CLS: Record<Drop['status'], string> = {
-  draft: 'bg-gray-100 text-gray-600',
+  scheduled: 'bg-gray-100 text-gray-600',
   active: 'bg-green-100 text-green-700',
   archived: 'bg-gray-100 text-gray-400',
 }
@@ -174,7 +174,7 @@ export default function DropDetail() {
   })
 
   const soldIds = items.filter(i => i.product.status === 'sold').map(i => i.product.id)
-  const availableIds = items.filter(i => i.product.status === 'available').map(i => i.product.id)
+  const listedIds = items.filter(i => i.product.status === 'listed').map(i => i.product.id)
 
   const { data: orderItems = [] } = useQuery({
     queryKey: ['order-items-for-drop', dropId, soldIds],
@@ -183,9 +183,9 @@ export default function DropDetail() {
   })
 
   const { data: reservations = [] } = useQuery({
-    queryKey: ['reservations-for-drop', dropId, availableIds],
-    queryFn: () => fetchReservations(availableIds),
-    enabled: availableIds.length > 0,
+    queryKey: ['reservations-for-drop', dropId, listedIds],
+    queryFn: () => fetchReservations(listedIds),
+    enabled: listedIds.length > 0,
   })
 
   const orderMap = new Map(orderItems.map(oi => [oi.product_id, oi]))

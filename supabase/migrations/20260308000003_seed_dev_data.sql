@@ -2,49 +2,48 @@
 -- Uses fixed UUIDs + do update so safe to run on every db reset
 
 -- ── Products ────────────────────────────────────────────────────────────────
--- Drop #1 items (4 шт, все проданы кроме одного — FOMO в архиве)
-
--- status legend:
+-- status legend (see .llm/context/product-lifecycle.md):
 --   sold     — sold in an archived drop
---   draft    — was in a drop but not sold (available for reuse)
---   available — in the current active drop, purchasable
+--   in_stock — was in a drop but not sold (back to stock, available for reuse)
+--   listed  — in the current active drop, purchasable
+-- list_price is set equal to price on first listing.
 
-insert into public.products (id, name, brand, country, size, measurements, item_number, price, stock_quantity, status) values
+insert into public.products (id, name, brand, country, size, measurements, item_number, price, list_price, stock_quantity, status) values
   -- Drop #1 (archived) — 7 sold, 3 not sold
-  ('11111111-0000-0000-0000-000000000001', 'Флисовая курточка',          'Regatta',            'England', 'M',   '{"chest":50,"length":70}',               '202', 1990.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000002', 'Свитшот оверсайз',           'George',             'England', 'L',   '{"chest":60,"length":65}',               '54',  1990.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000003', 'Брюки классические',         'YOURS',              'England', 'XL',  '{"waist":50,"hips":60,"length":110}',    '331', 1990.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000004', 'Спортивные брюки',           'M&S',                'England', 'L',   '{"waist":42,"hips":50,"length":90}',     '43',  1990.00, 1, 'draft'),  -- not sold
-  ('11111111-0000-0000-0000-000000000013', 'Джинсы прямые',              'Wrangler',           'USA',     'M',   '{"waist":38,"hips":48,"length":108}',    '213', 2490.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000014', 'Пальто классическое',        'F&F',                'England', 'L',   '{"chest":54,"length":95}',               '214', 3490.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000015', 'Платье трикотаж',            'ASOS',               'England', 'S',   '{"chest":44,"length":90}',               '215', 1990.00, 1, 'draft'),  -- not sold
-  ('11111111-0000-0000-0000-000000000016', 'Куртка флисовая',            'Columbia',           'USA',     'M',   '{"chest":52,"length":68}',               '216', 2990.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000017', 'Свитер вязаный',             'Next',               'England', 'XL',  '{"chest":60,"length":68}',               '217', 1990.00, 1, 'draft'),  -- not sold
-  ('11111111-0000-0000-0000-000000000018', 'Блузка принт',               'River Island',       'England', 'S',   '{"chest":46,"length":55}',               '218', 1490.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000001', 'Флисовая курточка',          'Regatta',            'England', 'M',   '{"chest":50,"length":70}',               '202', 1990.00, 1990.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000002', 'Свитшот оверсайз',           'George',             'England', 'L',   '{"chest":60,"length":65}',               '54',  1990.00, 1990.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000003', 'Брюки классические',         'YOURS',              'England', 'XL',  '{"waist":50,"hips":60,"length":110}',    '331', 1990.00, 1990.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000004', 'Спортивные брюки',           'M&S',                'England', 'L',   '{"waist":42,"hips":50,"length":90}',     '43',  1990.00, 1990.00, 1, 'in_stock'),  -- not sold
+  ('11111111-0000-0000-0000-000000000013', 'Джинсы прямые',              'Wrangler',           'USA',     'M',   '{"waist":38,"hips":48,"length":108}',    '213', 2490.00, 2490.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000014', 'Пальто классическое',        'F&F',                'England', 'L',   '{"chest":54,"length":95}',               '214', 3490.00, 3490.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000015', 'Платье трикотаж',            'ASOS',               'England', 'S',   '{"chest":44,"length":90}',               '215', 1990.00, 1990.00, 1, 'in_stock'),  -- not sold
+  ('11111111-0000-0000-0000-000000000016', 'Куртка флисовая',            'Columbia',           'USA',     'M',   '{"chest":52,"length":68}',               '216', 2990.00, 2990.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000017', 'Свитер вязаный',             'Next',               'England', 'XL',  '{"chest":60,"length":68}',               '217', 1990.00, 1990.00, 1, 'in_stock'),  -- not sold
+  ('11111111-0000-0000-0000-000000000018', 'Блузка принт',               'River Island',       'England', 'S',   '{"chest":46,"length":55}',               '218', 1490.00, 1490.00, 0, 'sold'),
 
   -- Drop #2 (archived) — 7 sold, 3 not sold
-  ('11111111-0000-0000-0000-000000000005', 'Блуза',                      'Pretty Little Thing','England', 'XS',  '{"chest":42,"length":50}',               '143', 2990.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000006', 'Свитшот на флисе оверсайз',  'Pretty Little Thing','England', 'S',   '{"chest":55,"length":70}',               '146', 2990.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000007', 'Удлинённая худи оверсайз',   'Pretty Little Thing','England', '3XL', '{"chest":80,"length":100}',              '148', 2990.00, 1, 'draft'),  -- not sold
-  ('11111111-0000-0000-0000-000000000008', 'Джинсы',                     'Pretty Little Thing','England', 'L',   '{"waist":40,"hips":50,"length":120}',    '177', 2990.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000019', 'Топ с открытой спиной',      'Pretty Little Thing','England', 'XS',  '{"chest":38,"length":42}',               '219', 1490.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000020', 'Кардиган оверсайз',          'Pretty Little Thing','England', 'M',   '{"chest":58,"length":72}',               '220', 2490.00, 1, 'draft'),  -- not sold
-  ('11111111-0000-0000-0000-000000000021', 'Платье мини',                'Pretty Little Thing','England', 'S',   '{"chest":42,"length":75}',               '221', 2490.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000022', 'Куртка спортивная',          'Pretty Little Thing','England', 'L',   '{"chest":56,"length":62}',               '222', 2990.00, 1, 'draft'),  -- not sold
-  ('11111111-0000-0000-0000-000000000023', 'Свитшот с капюшоном',        'Pretty Little Thing','England', 'XL',  '{"chest":62,"length":72}',               '223', 2490.00, 0, 'sold'),
-  ('11111111-0000-0000-0000-000000000024', 'Джемпер в полоску',          'Pretty Little Thing','England', 'M',   '{"chest":50,"length":60}',               '224', 1990.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000005', 'Блуза',                      'Pretty Little Thing','England', 'XS',  '{"chest":42,"length":50}',               '143', 2990.00, 2990.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000006', 'Свитшот на флисе оверсайз',  'Pretty Little Thing','England', 'S',   '{"chest":55,"length":70}',               '146', 2990.00, 2990.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000007', 'Удлинённая худи оверсайз',   'Pretty Little Thing','England', '3XL', '{"chest":80,"length":100}',              '148', 2990.00, 2990.00, 1, 'in_stock'),  -- not sold
+  ('11111111-0000-0000-0000-000000000008', 'Джинсы',                     'Pretty Little Thing','England', 'L',   '{"waist":40,"hips":50,"length":120}',    '177', 2990.00, 2990.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000019', 'Топ с открытой спиной',      'Pretty Little Thing','England', 'XS',  '{"chest":38,"length":42}',               '219', 1490.00, 1490.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000020', 'Кардиган оверсайз',          'Pretty Little Thing','England', 'M',   '{"chest":58,"length":72}',               '220', 2490.00, 2490.00, 1, 'in_stock'),  -- not sold
+  ('11111111-0000-0000-0000-000000000021', 'Платье мини',                'Pretty Little Thing','England', 'S',   '{"chest":42,"length":75}',               '221', 2490.00, 2490.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000022', 'Куртка спортивная',          'Pretty Little Thing','England', 'L',   '{"chest":56,"length":62}',               '222', 2990.00, 2990.00, 1, 'in_stock'),  -- not sold
+  ('11111111-0000-0000-0000-000000000023', 'Свитшот с капюшоном',        'Pretty Little Thing','England', 'XL',  '{"chest":62,"length":72}',               '223', 2490.00, 2490.00, 0, 'sold'),
+  ('11111111-0000-0000-0000-000000000024', 'Джемпер в полоску',          'Pretty Little Thing','England', 'M',   '{"chest":50,"length":60}',               '224', 1990.00, 1990.00, 0, 'sold'),
 
-  -- Drop #3 (active) — 9 available, 1 sold (FOMO)
-  ('11111111-0000-0000-0000-000000000009', 'Рубашка оверсайз',           'Primark',            'England', 'L',   '{"chest":70,"length":85}',               '35',  1990.00, 1, 'available'),
-  ('11111111-0000-0000-0000-000000000010', 'Платье миди',                'Papaya',             'England', 'S',   '{"chest":44,"length":100}',              '77',  1990.00, 1, 'available'),
-  ('11111111-0000-0000-0000-000000000011', 'Куртка с подкладкой',        'Abercrombie & Fitch','USA',     'M/L', '{"chest":50,"length":60}',               '168', 2990.00, 1, 'available'),
-  ('11111111-0000-0000-0000-000000000012', 'Куртка оверсайз',            'Crane',              'England', 'M',   '{"chest":60,"length":70}',               '46',  1990.00, 0, 'sold'),  -- FOMO
-  ('11111111-0000-0000-0000-000000000025', 'Жилет утеплённый',           'Crane',              'England', 'S',   '{"chest":48,"length":60}',               '225', 1990.00, 1, 'available'),
-  ('11111111-0000-0000-0000-000000000026', 'Рубашка в клетку',           'F&F',                'England', 'L',   '{"chest":58,"length":82}',               '226', 1490.00, 1, 'available'),
-  ('11111111-0000-0000-0000-000000000027', 'Майка базовая',              'ASOS',               'England', 'M',   '{"chest":50,"length":65}',               '227', 990.00,  1, 'available'),
-  ('11111111-0000-0000-0000-000000000028', 'Пиджак приталенный',         'H&M',                'Sweden',  'S',   '{"chest":46,"length":72}',               '228', 2990.00, 1, 'available'),
-  ('11111111-0000-0000-0000-000000000029', 'Ветровка лёгкая',            'Regatta',            'England', 'XL',  '{"chest":62,"length":74}',               '229', 2490.00, 1, 'available'),
-  ('11111111-0000-0000-0000-000000000030', 'Свитшот с принтом',          'George',             'England', 'L',   '{"chest":58,"length":68}',               '230', 1490.00, 1, 'available')
+  -- Drop #3 (active) — 9 listed, 1 sold (FOMO)
+  ('11111111-0000-0000-0000-000000000009', 'Рубашка оверсайз',           'Primark',            'England', 'L',   '{"chest":70,"length":85}',               '35',  1990.00, 1990.00, 1, 'listed'),
+  ('11111111-0000-0000-0000-000000000010', 'Платье миди',                'Papaya',             'England', 'S',   '{"chest":44,"length":100}',              '77',  1990.00, 1990.00, 1, 'listed'),
+  ('11111111-0000-0000-0000-000000000011', 'Куртка с подкладкой',        'Abercrombie & Fitch','USA',     'M/L', '{"chest":50,"length":60}',               '168', 2990.00, 2990.00, 1, 'listed'),
+  ('11111111-0000-0000-0000-000000000012', 'Куртка оверсайз',            'Crane',              'England', 'M',   '{"chest":60,"length":70}',               '46',  1990.00, 1990.00, 0, 'sold'),  -- FOMO
+  ('11111111-0000-0000-0000-000000000025', 'Жилет утеплённый',           'Crane',              'England', 'S',   '{"chest":48,"length":60}',               '225', 1990.00, 1990.00, 1, 'listed'),
+  ('11111111-0000-0000-0000-000000000026', 'Рубашка в клетку',           'F&F',                'England', 'L',   '{"chest":58,"length":82}',               '226', 1490.00, 1490.00, 1, 'listed'),
+  ('11111111-0000-0000-0000-000000000027', 'Майка базовая',              'ASOS',               'England', 'M',   '{"chest":50,"length":65}',               '227', 990.00,  990.00,  1, 'listed'),
+  ('11111111-0000-0000-0000-000000000028', 'Пиджак приталенный',         'H&M',                'Sweden',  'S',   '{"chest":46,"length":72}',               '228', 2990.00, 2990.00, 1, 'listed'),
+  ('11111111-0000-0000-0000-000000000029', 'Ветровка лёгкая',            'Regatta',            'England', 'XL',  '{"chest":62,"length":74}',               '229', 2490.00, 2490.00, 1, 'listed'),
+  ('11111111-0000-0000-0000-000000000030', 'Свитшот с принтом',          'George',             'England', 'L',   '{"chest":58,"length":68}',               '230', 1490.00, 1490.00, 1, 'listed')
 
 on conflict (id) do update set
   name           = excluded.name,
@@ -54,6 +53,7 @@ on conflict (id) do update set
   measurements   = excluded.measurements,
   item_number    = excluded.item_number,
   price          = excluded.price,
+  list_price     = excluded.list_price,
   stock_quantity = excluded.stock_quantity,
   status         = excluded.status;
 

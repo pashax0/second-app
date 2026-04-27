@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 interface DropRow {
   id: string
   title: string | null
-  status: 'draft' | 'active' | 'archived'
+  status: 'scheduled' | 'active' | 'archived'
   published_at: string | null
   created_at: string
   drop_items: { count: number }[]
@@ -23,7 +23,6 @@ async function fetchDrops(): Promise<DropRow[]> {
 }
 
 async function publishDrop(dropId: string) {
-  // Archive current active drop + reset its unsold products to draft
   const { data: activeDrop } = await supabase
     .from('drops')
     .select('id')
@@ -41,7 +40,7 @@ async function publishDrop(dropId: string) {
     if (productIds.length > 0) {
       const { error } = await supabase
         .from('products')
-        .update({ status: 'draft' })
+        .update({ status: 'in_stock' })
         .in('id', productIds)
         .neq('status', 'sold')
 
@@ -56,7 +55,6 @@ async function publishDrop(dropId: string) {
     if (archiveError) throw archiveError
   }
 
-  // Set new drop's products to available
   const { data: newItems } = await supabase
     .from('drop_items')
     .select('product_id')
@@ -67,7 +65,7 @@ async function publishDrop(dropId: string) {
   if (newProductIds.length > 0) {
     const { error } = await supabase
       .from('products')
-      .update({ status: 'available' })
+      .update({ status: 'listed' })
       .in('id', newProductIds)
 
     if (error) throw error
@@ -83,13 +81,13 @@ async function publishDrop(dropId: string) {
 }
 
 const STATUS_LABEL: Record<DropRow['status'], string> = {
-  draft: 'Draft',
+  scheduled: 'Scheduled',
   active: 'Active',
   archived: 'Archived',
 }
 
 const STATUS_CLS: Record<DropRow['status'], string> = {
-  draft: 'bg-gray-100 text-gray-600',
+  scheduled: 'bg-gray-100 text-gray-600',
   active: 'bg-green-100 text-green-700',
   archived: 'bg-gray-100 text-gray-400',
 }
@@ -189,7 +187,7 @@ export default function Drops() {
                     </td>
                     <td className="py-3 pr-4 text-gray-500">{publishedAt}</td>
                     <td className="py-3 text-right">
-                      {drop.status === 'draft' && (
+                      {drop.status === 'scheduled' && (
                         <button
                           onClick={() => handlePublish(drop)}
                           disabled={publishingId === drop.id}

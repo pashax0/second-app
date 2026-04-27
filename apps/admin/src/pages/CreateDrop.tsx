@@ -27,11 +27,11 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-async function fetchDraftProducts(): Promise<Product[]> {
+async function fetchInStockProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
     .select('id, name, brand, size, price, product_images(url, position)')
-    .eq('status', 'draft')
+    .eq('status', 'in_stock')
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -45,8 +45,8 @@ export default function CreateDrop() {
   const [saving, setSaving] = useState(false)
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products', 'draft'],
-    queryFn: fetchDraftProducts,
+    queryKey: ['products', 'in_stock'],
+    queryFn: fetchInStockProducts,
   })
 
   const {
@@ -78,7 +78,7 @@ export default function CreateDrop() {
           title: values.title,
           description: values.description || null,
           scheduled_at: new Date().toISOString(),
-          status: 'draft',
+          status: 'scheduled',
         })
         .select('id')
         .single()
