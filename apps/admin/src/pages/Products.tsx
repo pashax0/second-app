@@ -17,10 +17,37 @@ interface Product {
   item_number: string | null
   price: number
   status: 'in_stock' | 'listed' | 'sold' | 'written_off'
+  is_scheduled: boolean
+  is_returned_to_stock: boolean
+  is_in_cart: boolean
+  has_pending_return: boolean
   product_images: ProductImage[]
 }
 
 type Tab = 'all' | 'in_stock' | 'listed' | 'sold' | 'written_off'
+type SubFilter = 'scheduled' | 'returned' | 'in_cart' | 'pending_return' | null
+
+const SUB_FILTERS_BY_TAB: Record<Tab, SubFilter[]> = {
+  all:         ['scheduled', 'returned', 'in_cart'],
+  in_stock:    ['scheduled', 'returned'],
+  listed:      ['in_cart'],
+  sold:        ['pending_return'],
+  written_off: [],
+}
+
+const SUB_FILTER_LABEL: Record<NonNullable<SubFilter>, string> = {
+  scheduled:      'Scheduled',
+  returned:       'Returned',
+  in_cart:        'In cart',
+  pending_return: 'Pending return',
+}
+
+const SUB_FILTER_COLUMN: Record<NonNullable<SubFilter>, keyof Product> = {
+  scheduled:      'is_scheduled',
+  returned:       'is_returned_to_stock',
+  in_cart:        'is_in_cart',
+  pending_return: 'has_pending_return',
+}
 
 const PAGE_SIZE = 30
 
@@ -28,6 +55,7 @@ interface ProductsQuery {
   tab: Tab
   search: string
   page: number
+  subFilter: SubFilter
 }
 
 interface ProductsResult {
@@ -35,17 +63,21 @@ interface ProductsResult {
   total: number
 }
 
-async function fetchProducts({ tab, search, page }: ProductsQuery): Promise<ProductsResult> {
+async function fetchProducts({ tab, search, page, subFilter }: ProductsQuery): Promise<ProductsResult> {
   let query = supabase
-    .from('products')
+    .from('products_with_flags')
     .select(
-      'id, name, brand, size, item_number, price, status, product_images(storage_path, position)',
+      'id, name, brand, size, item_number, price, status, is_scheduled, is_returned_to_stock, is_in_cart, has_pending_return, product_images(storage_path, position)',
       { count: 'exact' },
     )
     .order('created_at', { ascending: false })
 
   if (tab === 'all') query = query.not('status', 'in', '(sold,written_off)')
   else query = query.eq('status', tab)
+
+  if (subFilter) {
+    query = query.eq(SUB_FILTER_COLUMN[subFilter], true)
+  }
 
   const term = search.trim()
   if (term) {
@@ -67,7 +99,7 @@ async function fetchProducts({ tab, search, page }: ProductsQuery): Promise<Prod
 }
 
 async function deleteProduct(id: string) {
-  const { error } = await supabase.from('products').delete().eq('id', id)
+  const { error } = await supabase.rpc('delete_product', { p_id: id })
   if (error) throw error
 }
 
@@ -106,22 +138,30 @@ export default function Products() {
   const queryClient = useQueryClient()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('all')
+  const [subFilter, setSubFilter] = useState<SubFilter>(null)
   const [searchInput, setSearchInput] = useState('')
   const search = useDebounced(searchInput, 300)
   const [page, setPage] = useState(0)
 
   useEffect(() => {
     setPage(0)
-  }, [tab, search])
+  }, [tab, search, subFilter])
+
+  // Reset sub-filter when switching to a tab where it doesn't apply
+  useEffect(() => {
+    if (subFilter && !SUB_FILTERS_BY_TAB[tab].includes(subFilter)) {
+      setSubFilter(null)
+    }
+  }, [tab, subFilter])
 
   const queryKey = useMemo(
-    () => ['products', { tab, search, page }] as const,
-    [tab, search, page],
+    () => ['products', { tab, search, page, subFilter }] as const,
+    [tab, search, page, subFilter],
   )
 
   const { data, isLoading, error, isFetching } = useQuery({
     queryKey,
-    queryFn: () => fetchProducts({ tab, search, page }),
+    queryFn: () => fetchProducts({ tab, search, page, subFilter }),
     placeholderData: keepPreviousData,
   })
 
@@ -197,6 +237,28 @@ export default function Products() {
         />
       </div>
 
+      {SUB_FILTERS_BY_TAB[tab].length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {SUB_FILTERS_BY_TAB[tab].map((f) => {
+            if (f === null) return null
+            const active = subFilter === f
+            return (
+              <button
+                key={f}
+                onClick={() => setSubFilter(active ? null : f)}
+                className={`px-2.5 py-1 text-xs rounded-full border ${
+                  active
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {SUB_FILTER_LABEL[f]}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
 
       {error && (
@@ -244,11 +306,33 @@ export default function Products() {
                     <td className="py-2 pr-4 text-gray-600">{p.size ?? '—'}</td>
                     <td className="py-2 pr-4 text-gray-900">{p.price} ₴</td>
                     <td className="py-2 pr-4">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_CLS[p.status]}`}
-                      >
-                        {STATUS_LABEL[p.status]}
-                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_CLS[p.status]}`}
+                        >
+                          {STATUS_LABEL[p.status]}
+                        </span>
+                        {p.is_in_cart && (
+                          <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                            In cart
+                          </span>
+                        )}
+                        {p.is_scheduled && (
+                          <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                            Scheduled
+                          </span>
+                        )}
+                        {p.is_returned_to_stock && p.status === 'in_stock' && (
+                          <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700">
+                            Returned
+                          </span>
+                        )}
+                        {p.has_pending_return && (
+                          <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">
+                            Pending return
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-2 text-right whitespace-nowrap">
                       <Link

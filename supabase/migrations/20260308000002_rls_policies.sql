@@ -41,6 +41,16 @@ create policy "products: authenticated update" on public.products
 create policy "products: authenticated delete" on public.products
   for delete using (auth.role() = 'authenticated');
 
+-- Column-level lockdown: status (and deleted_at) can only be changed via the
+-- lifecycle RPCs (SECURITY DEFINER). Direct UPDATE attempts on those columns
+-- are rejected. See .llm/context/product-lifecycle.md (section "Консистентность.2").
+revoke update on public.products from authenticated;
+grant update (
+  name, description, brand, country, size, measurements, item_number,
+  price, list_price, cost, condition, defect_notes, lot_id,
+  stock_quantity
+) on public.products to authenticated;
+
 -- product_images: public read; admin write
 create policy "product_images: public read" on public.product_images
   for select using (true);

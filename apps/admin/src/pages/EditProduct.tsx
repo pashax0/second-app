@@ -31,6 +31,11 @@ interface Product {
   item_number: string | null
   measurements: Measurements | null
   status: 'in_stock' | 'listed' | 'sold' | 'written_off'
+  list_price: number | null
+  cost: number | null
+  condition: string | null
+  defect_notes: string | null
+  lot_id: string | null
   product_images: ProductImage[]
 }
 
@@ -60,9 +65,9 @@ interface ProductFull {
 async function fetchProductFull(id: string): Promise<ProductFull> {
   const [productRes, reservationRes, dropItemRes, activeDropRes] = await Promise.all([
     supabase
-      .from('products')
+      .from('products_with_flags')
       .select(
-        'id, name, brand, size, price, description, item_number, measurements, status, product_images(storage_path, position)',
+        'id, name, brand, size, price, list_price, cost, condition, defect_notes, lot_id, description, item_number, measurements, status, product_images(storage_path, position)',
       )
       .eq('id', id)
       .single(),
@@ -110,6 +115,11 @@ function toFormValues(p: Product): ProductFormValues {
     brand: p.brand ?? '',
     size: p.size ?? '',
     price: String(p.price),
+    list_price: num(p.list_price),
+    cost: num(p.cost),
+    condition: p.condition ?? '',
+    defect_notes: p.defect_notes ?? '',
+    lot_id: p.lot_id ?? '',
     chest: num(m.chest),
     waist: num(m.waist),
     hips: num(m.hips),
@@ -290,6 +300,11 @@ export default function EditProduct() {
         brand: values.brand || null,
         size: values.size || null,
         price: parseFloat(values.price),
+        list_price: parseOptionalNumber(values.list_price),
+        cost: parseOptionalNumber(values.cost),
+        condition: values.condition || null,
+        defect_notes: values.condition === 'has_defect' ? values.defect_notes || null : null,
+        lot_id: values.lot_id || null,
         measurements,
         description: values.description || null,
         item_number: values.item_number || null,
@@ -309,26 +324,11 @@ export default function EditProduct() {
     setPublishError(null)
     setPublishing(true)
     try {
-      const { data: maxRow, error: maxErr } = await supabase
-        .from('drop_items')
-        .select('position')
-        .eq('drop_id', activeDrop.id)
-        .order('position', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      if (maxErr) throw maxErr
-      const nextPosition = (maxRow?.position ?? -1) + 1
-
-      const { error: insErr } = await supabase
-        .from('drop_items')
-        .insert({ drop_id: activeDrop.id, product_id: id, position: nextPosition })
-      if (insErr) throw insErr
-
-      const { error: updErr } = await supabase
-        .from('products')
-        .update({ status: 'listed' })
-        .eq('id', id)
-      if (updErr) throw updErr
+      const { error } = await supabase.rpc('publish_product', {
+        p_id: id,
+        p_drop_id: activeDrop.id,
+      })
+      if (error) throw error
 
       await queryClient.invalidateQueries({ queryKey: ['products'] })
       await queryClient.invalidateQueries({ queryKey: ['product', id] })
@@ -348,18 +348,8 @@ export default function EditProduct() {
     setWithdrawError(null)
     setWithdrawing(true)
     try {
-      const { error: delErr } = await supabase
-        .from('drop_items')
-        .delete()
-        .eq('product_id', id)
-        .eq('drop_id', activeDropItem.drop_id)
-      if (delErr) throw delErr
-
-      const { error: updErr } = await supabase
-        .from('products')
-        .update({ status: 'in_stock' })
-        .eq('id', id)
-      if (updErr) throw updErr
+      const { error } = await supabase.rpc('withdraw_product', { p_id: id })
+      if (error) throw error
 
       await queryClient.invalidateQueries({ queryKey: ['products'] })
       await queryClient.invalidateQueries({ queryKey: ['product', id] })

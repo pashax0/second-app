@@ -31,13 +31,21 @@ export default function CreateProduct() {
     const measurements =
       chest || waist || hips || length ? { chest, waist, hips, length } : null
 
+    const priceNumber = parseFloat(values.price)
+    const listPriceFromInput = parseOptionalNumber(values.list_price)
+
     const { data: product, error: insertError } = await supabase
       .from('products')
       .insert({
         name: values.name,
         brand: values.brand || null,
         size: values.size || null,
-        price: parseFloat(values.price),
+        price: priceNumber,
+        list_price: listPriceFromInput ?? priceNumber,
+        cost: parseOptionalNumber(values.cost),
+        condition: values.condition || null,
+        defect_notes: values.condition === 'has_defect' ? values.defect_notes || null : null,
+        lot_id: values.lot_id || null,
         measurements,
         description: values.description || null,
         item_number: values.item_number || null,
@@ -74,7 +82,7 @@ export default function CreateProduct() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">New Product</h1>
 
       <ProductForm
-        submitLabel="Save as Draft"
+        submitLabel="Save"
         onSubmit={onSubmit}
         onCancel={() => navigate('/products')}
       >

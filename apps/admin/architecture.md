@@ -78,12 +78,12 @@
 
 | Область                                        | Статус     |
 |------------------------------------------------|------------|
-| Товары: list / create / delete in_stock        | есть (имена статусов в коде: до lifecycle-миграции — `draft/available`) |
-| Товары: edit (включая photo manager)           | есть       |
-| Товары: withdraw / publish (mid-drop)          | есть       |
-| Товары: lifecycle migration (RPC + view + новые таблицы) | в работе ([products-admin.md](../../docs/plans/products-admin.md) шаг 8) |
-| Дропы: list / create / publish                 | есть (в коде ещё `draft`-status, переименуется в `scheduled`) |
-| Дропы: publish — атомарность (Postgres RPC)    | нет        |
+| Товары: list / create / edit / delete          | есть       |
+| Товары: photo manager (reorder + remove + add) | есть       |
+| Товары: withdraw / publish (mid-drop)          | есть (через RPC) |
+| Товары: lifecycle (RPC + триггеры + view + supply_lots/returns/write_offs) | есть |
+| Товары: composite-фильтры (Scheduled/Returned/In cart/Pending return) | есть       |
+| Дропы: list / create / publish (через `activate_drop` RPC, атомарно) | есть |
 | Дропы: edit / re-order items                   | нет        |
 | Аналитика дропа (DropDetail)                   | есть       |
 | Заказы                                         | нет        |
@@ -99,7 +99,8 @@
 В порядке приоритета (обсуждаемый):
 
 1. **Orders page** — без этого магазин не операбелен за пределами Instagram-DM.
-2. **Атомарная публикация дропа** — вынести multi-step UPDATE в Postgres RPC/транзакцию.
-3. **Product edit** — редактирование цен и метаданных.
-4. **Settings + per-user timer** — реализация правила из business.md.
-5. **Users page** — список и per-user overrides.
+2. **Возвраты (returns) UI** — RPC и таблицы готовы (`process_return`, `complete_return_inspection`), нужна страница инспекции.
+3. **Списания (write_offs) UI** — RPC `write_off_product` готова, нужна страница списаний и причин.
+4. **Supply lots UI** — таблица есть, поле в ProductForm есть; нужна отдельная страница для создания партий.
+5. **Settings + per-user timer** — реализация правила из business.md.
+6. **Users page** — список и per-user overrides.

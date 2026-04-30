@@ -29,7 +29,7 @@ type FormValues = z.infer<typeof schema>
 
 async function fetchInStockProducts(): Promise<Product[]> {
   const { data, error } = await supabase
-    .from('products')
+    .from('products_with_flags')
     .select('id, name, brand, size, price, product_images(url, position)')
     .eq('status', 'in_stock')
     .order('created_at', { ascending: false })
@@ -146,7 +146,7 @@ export default function CreateDrop() {
           {isLoading && <p className="text-sm text-gray-500">Loading products…</p>}
 
           {!isLoading && products.length === 0 && (
-            <p className="text-sm text-gray-500">No draft products available.</p>
+            <p className="text-sm text-gray-500">No in-stock products available.</p>
           )}
 
           {products.length > 0 && (

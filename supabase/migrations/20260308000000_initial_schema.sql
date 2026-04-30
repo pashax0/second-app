@@ -90,6 +90,8 @@ create table public.drop_items (
   unique (drop_id, product_id)
 );
 
+create index on public.drop_items (product_id);
+
 -- reservations: cart state (temporary, replaces 'reserved' product status)
 -- A product is "in cart" if a non-expired row exists here.
 -- No background cleanup needed — expired rows are ignored on read.

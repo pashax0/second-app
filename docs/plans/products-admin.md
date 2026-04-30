@@ -110,12 +110,12 @@
 - [x] Шаг 6.75: Live-сигналы (admin + mobile)
 - [x] Шаг 7: Lifecycle spec — [.llm/context/product-lifecycle.md](../../.llm/context/product-lifecycle.md)
 - [x] Шаг 8.1 + 8.2 + 8.7: новые поля/таблицы, list_price, rename статусов — сложены в базовые миграции (`…000_initial_schema`, `…002_rls_policies`, `…003_seed_dev_data`, `…004_create_order_fn`). Код admin/mobile переведён на новые литералы (`in_stock`/`listed`/`written_off`, `scheduled`). UI-имена статусов и табов в Products переименованы заодно.
-- [ ] Шаг 8.3: RPC функции lifecycle
-- [ ] Шаг 8.4: Триггеры (guard rails)
-- [ ] Шаг 8.5: RLS column-deny на products.status
-- [ ] Шаг 8.6: View products_with_flags
-- [ ] Шаг 8.8: Admin — RPC + view (то, что осталось после 8.7)
-- [ ] Шаг 8.9: Admin — новые поля в ProductForm
-- [ ] Шаг 8.10: Admin — composite в UI
-- [ ] Шаг 8.11: Mobile — composite-запросы (типы уже переведены)
-- [ ] Шаг 8.12: Docs sync
+- [x] Шаг 8.3: RPC функции lifecycle (`20260308000005_lifecycle_rpcs.sql`) — 10 функций SECURITY DEFINER, все happy paths и негативные кейсы проверены.
+- [x] Шаг 8.4: Триггеры (guard rails) — `_recompute_product_status` + триггеры на `drop_items`/`drops`/`orders`. Прямые манипуляции таблицами автосинкают `products.status`.
+- [x] Шаг 8.6: View `products_with_flags` (security_invoker=on) — 4 boolean-флага (`is_scheduled`, `is_returned_to_stock`, `is_in_cart`, `has_pending_return`); soft-deleted скрыты.
+- [x] Шаг 8.8: Admin — мутации статуса через RPC, list/single read через view, `delete_product` RPC.
+- [x] Шаг 8.5: RLS column-deny — `revoke update on products from authenticated; grant update (... allowed cols ...)`. `status` и `deleted_at` менять только через RPC.
+- [x] Шаг 8.9: Admin — новые поля (`cost`, `list_price`, `condition`, `defect_notes`, `lot_id`) в ProductForm. Defect notes textarea показывается при `condition='has_defect'`. Lot — selector из `supply_lots`.
+- [x] Шаг 8.10: Admin — composite в UI: бейджи `In cart`/`Scheduled`/`Returned`/`Pending return` в Status-колонке + sub-filter chips per-tab.
+- [x] Шаг 8.11: Mobile — типы и литералы переведены ещё в 8.7; composite-флаги моб не использует (cart-state — прямой read из `reservations` с realtime).
+- [x] Шаг 8.12: Docs sync — `apps/admin/architecture.md`, `apps/admin/src/pages/CreateDrop.tsx` (UI text), `CreateProduct.tsx` (submitLabel). Grep `draft|available` остаётся только в исторических context-файлах (`product-lifecycle.md`, плане) и в seed-комментарии (English слово, не статус).

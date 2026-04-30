@@ -23,60 +23,7 @@ async function fetchDrops(): Promise<DropRow[]> {
 }
 
 async function publishDrop(dropId: string) {
-  const { data: activeDrop } = await supabase
-    .from('drops')
-    .select('id')
-    .eq('status', 'active')
-    .maybeSingle()
-
-  if (activeDrop) {
-    const { data: activeItems } = await supabase
-      .from('drop_items')
-      .select('product_id')
-      .eq('drop_id', activeDrop.id)
-
-    const productIds = (activeItems ?? []).map((i) => i.product_id)
-
-    if (productIds.length > 0) {
-      const { error } = await supabase
-        .from('products')
-        .update({ status: 'in_stock' })
-        .in('id', productIds)
-        .neq('status', 'sold')
-
-      if (error) throw error
-    }
-
-    const { error: archiveError } = await supabase
-      .from('drops')
-      .update({ status: 'archived' })
-      .eq('id', activeDrop.id)
-
-    if (archiveError) throw archiveError
-  }
-
-  const { data: newItems } = await supabase
-    .from('drop_items')
-    .select('product_id')
-    .eq('drop_id', dropId)
-
-  const newProductIds = (newItems ?? []).map((i) => i.product_id)
-
-  if (newProductIds.length > 0) {
-    const { error } = await supabase
-      .from('products')
-      .update({ status: 'listed' })
-      .in('id', newProductIds)
-
-    if (error) throw error
-  }
-
-  // Activate drop
-  const { error } = await supabase
-    .from('drops')
-    .update({ status: 'active', published_at: new Date().toISOString() })
-    .eq('id', dropId)
-
+  const { error } = await supabase.rpc('activate_drop', { p_drop_id: dropId })
   if (error) throw error
 }
 

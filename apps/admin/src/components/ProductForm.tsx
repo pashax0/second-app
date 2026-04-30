@@ -2,6 +2,15 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '../../lib/supabase'
+
+export const CONDITION_OPTIONS = [
+  { value: 'new_with_tags', label: 'New with tags' },
+  { value: 'excellent', label: 'Excellent' },
+  { value: 'good', label: 'Good' },
+  { value: 'has_defect', label: 'Has defect' },
+] as const
 
 export const productFormSchema = z.object({
   name: z.string().min(1, 'Required'),
@@ -11,6 +20,11 @@ export const productFormSchema = z.object({
     .string()
     .min(1, 'Required')
     .refine((v) => !isNaN(parseFloat(v)) && parseFloat(v) > 0, 'Must be > 0'),
+  list_price: z.string().optional(),
+  cost: z.string().optional(),
+  condition: z.string().optional(),
+  defect_notes: z.string().optional(),
+  lot_id: z.string().optional(),
   chest: z.string().optional(),
   waist: z.string().optional(),
   hips: z.string().optional(),
@@ -20,6 +34,27 @@ export const productFormSchema = z.object({
 })
 
 export type ProductFormValues = z.infer<typeof productFormSchema>
+
+interface SupplyLot {
+  id: string
+  source_country: string | null
+  supplier: string | null
+  received_at: string | null
+}
+
+async function fetchSupplyLots(): Promise<SupplyLot[]> {
+  const { data, error } = await supabase
+    .from('supply_lots')
+    .select('id, source_country, supplier, received_at')
+    .order('received_at', { ascending: false, nullsFirst: false })
+  if (error) throw error
+  return data ?? []
+}
+
+function lotLabel(lot: SupplyLot) {
+  const parts = [lot.supplier, lot.source_country, lot.received_at].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : `Lot ${lot.id.slice(0, 8)}`
+}
 
 export function parseOptionalNumber(v: string | undefined | null) {
   if (!v || v.trim() === '') return null
@@ -53,11 +88,15 @@ export default function ProductForm({
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues,
   })
+
+  const condition = watch('condition')
+  const { data: lots = [] } = useQuery({ queryKey: ['supply_lots'], queryFn: fetchSupplyLots })
 
   async function submit(values: ProductFormValues) {
     setSubmitError(null)
@@ -88,15 +127,65 @@ export default function ProductForm({
         </Field>
       </div>
 
-      <Field label="Price" required error={errors.price?.message}>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          {...register('price')}
-          className={inputCls(!!errors.price)}
-        />
-      </Field>
+      <div className="grid grid-cols-3 gap-4">
+        <Field label="Price" required error={errors.price?.message}>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            {...register('price')}
+            className={inputCls(!!errors.price)}
+          />
+        </Field>
+        <Field label="List price" error={errors.list_price?.message}>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            {...register('list_price')}
+            className={inputCls(!!errors.list_price)}
+          />
+        </Field>
+        <Field label="Cost" error={errors.cost?.message}>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            {...register('cost')}
+            className={inputCls(!!errors.cost)}
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Condition" error={errors.condition?.message}>
+          <select {...register('condition')} className={inputCls(!!errors.condition)}>
+            <option value="">—</option>
+            {CONDITION_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Lot" error={errors.lot_id?.message}>
+          <select {...register('lot_id')} className={inputCls(!!errors.lot_id)}>
+            <option value="">—</option>
+            {lots.map((l) => (
+              <option key={l.id} value={l.id}>{lotLabel(l)}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      {condition === 'has_defect' && (
+        <Field label="Defect notes" error={errors.defect_notes?.message}>
+          <textarea
+            {...register('defect_notes')}
+            rows={2}
+            className={inputCls(!!errors.defect_notes)}
+            placeholder="Что не так с товаром"
+          />
+        </Field>
+      )}
 
       <div>
         <p className="block text-sm font-medium text-gray-700 mb-1">Measurements (cm)</p>
