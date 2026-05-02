@@ -411,6 +411,28 @@ create trigger sync_drop_items_change
   after insert or delete on public.drop_items
   for each row execute function public._sync_drop_items_change();
 
+-- drop_items BEFORE INSERT → enforce one product = at most one scheduled/active plan
+create or replace function public._guard_drop_items_unique_plan()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if exists (
+    select 1 from public.drop_items di
+    join public.drops d on d.id = di.drop_id
+    where di.product_id = NEW.product_id
+      and di.drop_id <> NEW.drop_id
+      and d.status in ('scheduled', 'active')
+  ) then
+    raise exception 'product % is already planned in another scheduled or active drop', NEW.product_id
+      using errcode = '23505';
+  end if;
+  return NEW;
+end;
+$$;
+
+create trigger guard_drop_items_unique_plan
+  before insert on public.drop_items
+  for each row execute function public._guard_drop_items_unique_plan();
+
 -- drops AFTER UPDATE OF status → mass recompute every product in this drop
 create or replace function public._sync_drops_status_change()
 returns trigger language plpgsql security definer set search_path = public as $$

@@ -9,11 +9,13 @@ interface Drop {
   title: string | null
   description: string | null
   status: 'scheduled' | 'active' | 'archived'
+  scheduled_at: string
   published_at: string | null
+  discount_percent: number | null
 }
 
 interface ProductImage {
-  url: string
+  storage_path: string
   position: number
 }
 
@@ -48,7 +50,7 @@ interface ReservationRow {
 async function fetchDrop(dropId: string): Promise<Drop> {
   const { data, error } = await supabase
     .from('drops')
-    .select('id, title, description, status, published_at')
+    .select('id, title, description, status, scheduled_at, published_at, discount_percent')
     .eq('id', dropId)
     .single()
   if (error) throw error
@@ -62,7 +64,7 @@ async function fetchDropItems(dropId: string): Promise<DropItemRow[]> {
       id, position, override_price,
       product:products(
         id, name, brand, size, price, status,
-        product_images(url, position)
+        product_images(storage_path, position)
       )
     `)
     .eq('drop_id', dropId)
@@ -231,6 +233,11 @@ export default function DropDetail() {
                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${DROP_STATUS_CLS[drop.status]}`}>
                   {drop.status.charAt(0).toUpperCase() + drop.status.slice(1)}
                 </span>
+                {drop.discount_percent != null && (
+                  <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-700">
+                    −{drop.discount_percent}%
+                  </span>
+                )}
               </div>
               {drop.description && (
                 <p className="text-sm text-gray-500 mb-2">{drop.description}</p>
@@ -240,6 +247,9 @@ export default function DropDetail() {
                 {soldHereItems.length > 0 && (
                   <> · <span className="text-blue-600 font-medium">{soldHereItems.length} sold here</span>
                   {' '}· <span className="font-medium text-gray-900">{revenue.toLocaleString()} ₴ revenue</span></>
+                )}
+                {drop.status === 'scheduled' && (
+                  <> · scheduled for {new Date(drop.scheduled_at).toLocaleString()}</>
                 )}
                 {drop.published_at && (
                   <> · published {new Date(drop.published_at).toLocaleDateString()}</>
@@ -279,7 +289,7 @@ export default function DropDetail() {
                         <td className="py-2 pr-4">
                           {thumb ? (
                             <img
-                              src={thumb.url}
+                              src={supabase.storage.from('product-images').getPublicUrl(thumb.storage_path).data.publicUrl}
                               alt=""
                               className="h-12 w-12 object-cover rounded border border-gray-200"
                             />
