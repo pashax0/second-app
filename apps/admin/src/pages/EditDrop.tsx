@@ -12,20 +12,12 @@ interface Drop {
   description: string | null
   status: 'scheduled' | 'active' | 'archived'
   scheduled_at: string
-  discount_percent: number | null
 }
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   scheduled_at: z.string().min(1, 'Scheduled date is required'),
-  discount_percent: z
-    .string()
-    .optional()
-    .refine(
-      (v) => !v || (Number(v) > 0 && Number(v) < 100),
-      'Must be between 1 and 99',
-    ),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -38,7 +30,7 @@ function toLocalDatetimeInput(d: Date): string {
 async function fetchDrop(dropId: string): Promise<Drop> {
   const { data, error } = await supabase
     .from('drops')
-    .select('id, title, description, status, scheduled_at, discount_percent')
+    .select('id, title, description, status, scheduled_at')
     .eq('id', dropId)
     .single()
   if (error) throw error
@@ -64,7 +56,7 @@ export default function EditDrop() {
     setError,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { title: '', description: '', scheduled_at: '', discount_percent: '' },
+    defaultValues: { title: '', description: '', scheduled_at: '' },
   })
 
   useEffect(() => {
@@ -73,7 +65,6 @@ export default function EditDrop() {
       title: drop.title ?? '',
       description: drop.description ?? '',
       scheduled_at: toLocalDatetimeInput(new Date(drop.scheduled_at)),
-      discount_percent: drop.discount_percent != null ? String(drop.discount_percent) : '',
     })
   }, [drop, reset])
 
@@ -86,7 +77,6 @@ export default function EditDrop() {
         title: values.title,
         description: values.description || null,
         scheduled_at: new Date(values.scheduled_at).toISOString(),
-        discount_percent: values.discount_percent ? Number(values.discount_percent) : null,
       })
       .eq('id', dropId)
 
@@ -157,38 +147,18 @@ export default function EditDrop() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Scheduled date <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="datetime-local"
-              {...register('scheduled_at')}
-              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-            />
-            {errors.scheduled_at && (
-              <p className="text-xs text-red-500 mt-1">{errors.scheduled_at.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Discount, %
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={99}
-              step={1}
-              {...register('discount_percent')}
-              placeholder="—"
-              className="w-24 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-            />
-            {errors.discount_percent && (
-              <p className="text-xs text-red-500 mt-1">{errors.discount_percent.message}</p>
-            )}
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Scheduled date <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="datetime-local"
+            {...register('scheduled_at')}
+            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          />
+          {errors.scheduled_at && (
+            <p className="text-xs text-red-500 mt-1">{errors.scheduled_at.message}</p>
+          )}
         </div>
 
         {errors.root && (

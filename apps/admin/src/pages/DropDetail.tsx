@@ -12,7 +12,6 @@ interface Drop {
   status: 'scheduled' | 'active' | 'archived'
   scheduled_at: string
   published_at: string | null
-  discount_percent: number | null
 }
 
 interface ProductImage {
@@ -24,6 +23,7 @@ interface DropItemRow {
   id: string
   position: number
   override_price: number | null
+  compare_at_price: number | null
   product: {
     id: string
     name: string
@@ -51,7 +51,7 @@ interface ReservationRow {
 async function fetchDrop(dropId: string): Promise<Drop> {
   const { data, error } = await supabase
     .from('drops')
-    .select('id, title, description, status, scheduled_at, published_at, discount_percent')
+    .select('id, title, description, status, scheduled_at, published_at')
     .eq('id', dropId)
     .single()
   if (error) throw error
@@ -62,7 +62,7 @@ async function fetchDropItems(dropId: string): Promise<DropItemRow[]> {
   const { data, error } = await supabase
     .from('drop_items')
     .select(`
-      id, position, override_price,
+      id, position, override_price, compare_at_price,
       product:products(
         id, name, brand, size, price, status,
         product_images(storage_path, position)
@@ -280,6 +280,24 @@ export default function DropDetail() {
     }
   }
 
+  async function handleCompareAtPrice(item: DropItemRow, raw: string) {
+    if (!dropId) return
+    const trimmed = raw.trim()
+    const next = trimmed && Number(trimmed) > 0 ? Number(trimmed) : null
+    if (next === item.compare_at_price) return
+    setPriceError(null)
+    try {
+      const { error } = await supabase
+        .from('drop_items')
+        .update({ compare_at_price: next })
+        .eq('id', item.id)
+      if (error) throw error
+      await queryClient.invalidateQueries({ queryKey: ['drop-items', dropId] })
+    } catch (err) {
+      setPriceError(err instanceof Error ? err.message : 'Failed to save price')
+    }
+  }
+
   async function handleRemove(item: DropItemRow) {
     if (!dropId || !drop) return
     if (!confirm('Remove this product from the drop?')) return
@@ -368,11 +386,6 @@ export default function DropDetail() {
                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${DROP_STATUS_CLS[drop.status]}`}>
                   {drop.status.charAt(0).toUpperCase() + drop.status.slice(1)}
                 </span>
-                {drop.discount_percent != null && (
-                  <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-700">
-                    −{drop.discount_percent}%
-                  </span>
-                )}
               </div>
               {drop.description && (
                 <p className="text-sm text-gray-500 mb-2">{drop.description}</p>
@@ -422,7 +435,8 @@ export default function DropDetail() {
                     <th className="pb-2 pr-4 w-14">Photo</th>
                     <th className="pb-2 pr-4">Brand</th>
                     <th className="pb-2 pr-4">Size</th>
-                    <th className="pb-2 pr-4">Listed</th>
+                    <th className="pb-2 pr-4" title="Effective price — what customer pays">Price</th>
+                    <th className="pb-2 pr-4" title="Compare-at — strikethrough + promo badge if &gt; price">Compare-at</th>
                     <th className="pb-2 pr-4">Sold price</th>
                     <th className="pb-2 pr-4">Status</th>
                     {drop.status !== 'archived' && <th className="pb-2 w-10" />}
@@ -433,7 +447,8 @@ export default function DropDetail() {
                     const ds = resolveStatus(item, dropId!, orderMap, reservationMap)
                     const thumb = [...item.product.product_images]
                       .sort((a, b) => a.position - b.position)[0]
-                    const displayPrice = item.override_price ?? item.product.price
+                    const effectivePrice = item.override_price ?? item.product.price
+                    const isPromo = item.compare_at_price != null && item.compare_at_price > effectivePrice
 
                     return (
                       <tr key={item.id} className="hover:bg-gray-50">
@@ -456,7 +471,7 @@ export default function DropDetail() {
                         <td className="py-2 pr-4 text-gray-900">
                           {drop.status === 'scheduled' ? (
                             <input
-                              key={`${item.id}:${item.override_price ?? ''}`}
+                              key={`${item.id}:override:${item.override_price ?? ''}`}
                               type="number"
                               min={1}
                               step={1}
@@ -467,7 +482,31 @@ export default function DropDetail() {
                               className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
                             />
                           ) : (
-                            <>{displayPrice} ₴</>
+                            <>{effectivePrice} ₴</>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4 text-gray-600">
+                          {drop.status === 'scheduled' ? (
+                            <input
+                              key={`${item.id}:compare:${item.compare_at_price ?? ''}`}
+                              type="number"
+                              min={1}
+                              step={1}
+                              defaultValue={item.compare_at_price ?? ''}
+                              placeholder="—"
+                              onBlur={(e) => handleCompareAtPrice(item, e.target.value)}
+                              title="Compare-at — strikethrough + promo badge if > price"
+                              className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                            />
+                          ) : isPromo ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <s className="text-gray-400">{item.compare_at_price} ₴</s>
+                              <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-xs font-medium">
+                                −{Math.round((1 - effectivePrice / item.compare_at_price!) * 100)}%
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
                           )}
                         </td>
                         <td className="py-2 pr-4 text-gray-900">

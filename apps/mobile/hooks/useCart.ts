@@ -10,6 +10,22 @@ export type CartItem = {
   product_id: string;
   drop_id: string;
   expires_at: string;
+  effective_price: number;
+  compare_at_price: number | null;
+  product: {
+    id: string;
+    name: string;
+    brand: string | null;
+    status: string;
+    images: { storage_path: string; position: number }[];
+  };
+};
+
+type ReservationRow = {
+  id: string;
+  product_id: string;
+  drop_id: string;
+  expires_at: string;
   product: {
     id: string;
     name: string;
@@ -17,6 +33,7 @@ export type CartItem = {
     price: number;
     status: string;
     images: { storage_path: string; position: number }[];
+    drop_items: { drop_id: string; override_price: number | null; compare_at_price: number | null }[];
   };
 };
 
@@ -32,7 +49,8 @@ export function useMyCart() {
         .select(`
           id, product_id, drop_id, expires_at,
           product:products(id, name, brand, price, status,
-            images:product_images(storage_path, position)
+            images:product_images(storage_path, position),
+            drop_items(drop_id, override_price, compare_at_price)
           )
         `)
         .eq('user_id', session.user.id)
@@ -40,7 +58,21 @@ export function useMyCart() {
         .order('created_at');
 
       if (error) throw error;
-      return (data ?? []) as unknown as CartItem[];
+
+      return ((data ?? []) as unknown as ReservationRow[]).map((r) => {
+        const di = r.product.drop_items.find((x) => x.drop_id === r.drop_id);
+        const effective_price = di?.override_price ?? r.product.price;
+        const { drop_items: _di, price: _basePrice, ...productRest } = r.product;
+        return {
+          id: r.id,
+          product_id: r.product_id,
+          drop_id: r.drop_id,
+          expires_at: r.expires_at,
+          effective_price,
+          compare_at_price: di?.compare_at_price ?? null,
+          product: productRest,
+        };
+      });
     },
   });
 }

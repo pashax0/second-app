@@ -69,7 +69,6 @@ create table public.drops (
   description       text,           -- optional header shown above the item grid
   scheduled_at      timestamptz not null,
   published_at      timestamptz,
-  discount_percent  numeric(5,2) check (discount_percent is null or (discount_percent > 0 and discount_percent < 100)),
   -- scheduled → active → archived
   status            text not null default 'scheduled'
                     check (status in ('scheduled', 'active', 'archived')),
@@ -77,16 +76,18 @@ create table public.drops (
   updated_at        timestamptz not null default now()
 );
 
--- drop_items: which products are in a drop, with optional price override
--- override_price: if set, shown as "new price"; product.price shown as "old price"
+-- drop_items: which products are in a drop, with optional price overrides
+-- override_price:    silent layer — what the customer pays in this drop (falls back to products.price)
+-- compare_at_price:  promo layer — when set and > effective price, UI shows strikethrough + "-X%" badge
 create table public.drop_items (
-  id              uuid primary key default gen_random_uuid(),
-  drop_id         uuid not null references public.drops(id) on delete cascade,
-  product_id      uuid not null references public.products(id) on delete cascade,
-  quantity        int not null default 1,
-  position        int not null default 0,  -- display order in the grid
-  override_price  numeric(10,2),           -- nullable; enables strikethrough pricing in future
-  created_at      timestamptz not null default now(),
+  id                uuid primary key default gen_random_uuid(),
+  drop_id           uuid not null references public.drops(id) on delete cascade,
+  product_id        uuid not null references public.products(id) on delete cascade,
+  quantity          int not null default 1,
+  position          int not null default 0,
+  override_price    numeric(10,2) check (override_price is null or override_price > 0),
+  compare_at_price  numeric(10,2) check (compare_at_price is null or compare_at_price > 0),
+  created_at        timestamptz not null default now(),
   unique (drop_id, product_id)
 );
 

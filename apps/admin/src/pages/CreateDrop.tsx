@@ -39,13 +39,6 @@ const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   scheduled_at: z.string().min(1, 'Scheduled date is required'),
-  discount_percent: z
-    .string()
-    .optional()
-    .refine(
-      (v) => !v || (Number(v) > 0 && Number(v) < 100),
-      'Must be between 1 and 99',
-    ),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -84,6 +77,7 @@ export default function CreateDrop() {
   const navigate = useNavigate()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [overridePrices, setOverridePrices] = useState<Record<string, string>>({})
+  const [compareAtPrices, setCompareAtPrices] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -150,6 +144,11 @@ export default function CreateDrop() {
           const { [id]: _, ...rest } = p
           return rest
         })
+        setCompareAtPrices((p) => {
+          if (!(id in p)) return p
+          const { [id]: _, ...rest } = p
+          return rest
+        })
       } else {
         next.add(id)
       }
@@ -172,7 +171,6 @@ export default function CreateDrop() {
           title: values.title,
           description: values.description || null,
           scheduled_at: new Date(values.scheduled_at).toISOString(),
-          discount_percent: values.discount_percent ? Number(values.discount_percent) : null,
           status: 'scheduled',
         })
         .select('id')
@@ -181,13 +179,14 @@ export default function CreateDrop() {
       if (dropError) throw dropError
 
       const items = Array.from(selectedIds).map((productId, i) => {
-        const raw = overridePrices[productId]?.trim()
-        const override = raw && Number(raw) > 0 ? Number(raw) : null
+        const overrideRaw = overridePrices[productId]?.trim()
+        const compareRaw = compareAtPrices[productId]?.trim()
         return {
           drop_id: drop.id,
           product_id: productId,
           position: i,
-          override_price: override,
+          override_price: overrideRaw && Number(overrideRaw) > 0 ? Number(overrideRaw) : null,
+          compare_at_price: compareRaw && Number(compareRaw) > 0 ? Number(compareRaw) : null,
         }
       })
 
@@ -233,39 +232,19 @@ export default function CreateDrop() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Scheduled date <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="datetime-local"
-              min={nowLocal()}
-              {...register('scheduled_at')}
-              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-            />
-            {errors.scheduled_at && (
-              <p className="text-xs text-red-500 mt-1">{errors.scheduled_at.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Discount, %
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={99}
-              step={1}
-              {...register('discount_percent')}
-              placeholder="—"
-              className="w-24 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-            />
-            {errors.discount_percent && (
-              <p className="text-xs text-red-500 mt-1">{errors.discount_percent.message}</p>
-            )}
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Scheduled date <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="datetime-local"
+            min={nowLocal()}
+            {...register('scheduled_at')}
+            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          />
+          {errors.scheduled_at && (
+            <p className="text-xs text-red-500 mt-1">{errors.scheduled_at.message}</p>
+          )}
         </div>
 
         <div>
@@ -389,19 +368,34 @@ export default function CreateDrop() {
                       <p className="text-xs text-gray-500">{p.size ?? '—'} · {p.price} ₴</p>
                     </div>
                     {checked && (
-                      <input
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={overridePrices[p.id] ?? ''}
-                        onChange={(e) =>
-                          setOverridePrices((prev) => ({ ...prev, [p.id]: e.target.value }))
-                        }
-                        onClick={(e) => e.stopPropagation()}
-                        placeholder={`${p.price}`}
-                        title="Override price for this drop"
-                        className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={overridePrices[p.id] ?? ''}
+                          onChange={(e) =>
+                            setOverridePrices((prev) => ({ ...prev, [p.id]: e.target.value }))
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder={`${p.price}`}
+                          title="Drop price (overrides product price). Empty = use base."
+                          className="w-20 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                        />
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={compareAtPrices[p.id] ?? ''}
+                          onChange={(e) =>
+                            setCompareAtPrices((prev) => ({ ...prev, [p.id]: e.target.value }))
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="—"
+                          title="Compare-at price. If set and > drop price → shown as strikethrough + promo badge."
+                          className="w-20 border border-gray-300 rounded px-2 py-1 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                        />
+                      </div>
                     )}
                   </label>
                 )

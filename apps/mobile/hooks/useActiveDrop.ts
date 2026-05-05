@@ -37,6 +37,7 @@ export type DropItem = {
   quantity: number;
   position: number;
   override_price: number | null;
+  compare_at_price: number | null;
   product: DropProduct;
 };
 
@@ -63,6 +64,7 @@ async function fetchActiveDrop(): Promise<ActiveDrop | null> {
         quantity,
         position,
         override_price,
+        compare_at_price,
         product:products (
           id,
           name,

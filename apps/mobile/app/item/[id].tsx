@@ -133,8 +133,12 @@ function ItemCard({
   reservation: Reservation | undefined;
   onAnonCartLimit: () => void;
 }) {
-  const { product, override_price } = item;
-  const displayPrice = override_price ?? product.price;
+  const { product, override_price, compare_at_price } = item;
+  const effectivePrice = override_price ?? product.price;
+  const isPromo = compare_at_price != null && compare_at_price > effectivePrice;
+  const promoPercent = isPromo
+    ? Math.round((1 - effectivePrice / compare_at_price!) * 100)
+    : null;
   const measurements = formatMeasurements(product.measurements);
   const { user, isAnonymous } = useAuthStore();
   const { mutate: addToCart, isPending: isAdding } = useAddToCart();
@@ -194,9 +198,21 @@ function ItemCard({
 
       <View className="px-4 pt-4 pb-8 border-t border-gray-100 bg-white">
         <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-gray-900">
-            {displayPrice.toLocaleString('ru-RU')} ₽
-          </Text>
+          <View className="flex-row items-baseline gap-2">
+            <Text className="text-2xl font-bold text-gray-900">
+              {effectivePrice.toLocaleString('ru-RU')} ₽
+            </Text>
+            {isPromo && (
+              <>
+                <Text className="text-sm text-gray-400 line-through">
+                  {compare_at_price!.toLocaleString('ru-RU')} ₽
+                </Text>
+                <Text className="text-xs font-semibold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">
+                  −{promoPercent}%
+                </Text>
+              </>
+            )}
+          </View>
 
           <ActionButton
             isSold={isSold}

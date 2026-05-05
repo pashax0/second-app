@@ -155,9 +155,16 @@ function CartRow({ item, isAnonymous }: { item: CartItem; isAnonymous: boolean }
         {item.product.brand ? (
           <Text className="text-sm text-gray-500">{item.product.brand}</Text>
         ) : null}
-        <Text className="text-sm font-medium text-gray-900 mt-1">
-          {Number(item.product.price).toLocaleString('ru-RU')} ₽
-        </Text>
+        <View className="flex-row items-baseline gap-2 mt-1">
+          <Text className="text-sm font-medium text-gray-900">
+            {item.effective_price.toLocaleString('ru-RU')} ₽
+          </Text>
+          {item.compare_at_price != null && item.compare_at_price > item.effective_price && (
+            <Text className="text-xs text-gray-400 line-through">
+              {item.compare_at_price.toLocaleString('ru-RU')} ₽
+            </Text>
+          )}
+        </View>
         {countdown ? (
           <Text className="text-xs text-orange-500 mt-0.5">Зарезервировано {countdown}</Text>
         ) : null}
