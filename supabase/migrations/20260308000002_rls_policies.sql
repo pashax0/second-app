@@ -84,6 +84,9 @@ create policy "drop_items: public read" on public.drop_items
 create policy "drop_items: authenticated insert" on public.drop_items
   for insert with check (auth.role() = 'authenticated');
 
+create policy "drop_items: authenticated update" on public.drop_items
+  for update using (auth.role() = 'authenticated');
+
 create policy "drop_items: authenticated delete" on public.drop_items
   for delete using (auth.role() = 'authenticated');
 

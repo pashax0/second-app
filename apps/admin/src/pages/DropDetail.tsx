@@ -1,5 +1,6 @@
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -94,6 +95,36 @@ async function fetchReservations(productIds: string[]): Promise<ReservationRow[]
   return data ?? []
 }
 
+interface AvailableProduct {
+  id: string
+  name: string
+  brand: string | null
+  size: string | null
+  item_number: string | null
+  price: number
+  product_images: ProductImage[]
+}
+
+async function fetchAvailableProducts(): Promise<AvailableProduct[]> {
+  const { data, error } = await supabase
+    .from('products_with_flags')
+    .select('id, name, brand, size, item_number, price, product_images(storage_path, position)')
+    .eq('status', 'in_stock')
+    .eq('is_scheduled', false)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as unknown as AvailableProduct[]
+}
+
+function useDebounced<T>(value: T, delay = 250): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(id)
+  }, [value, delay])
+  return debounced
+}
+
 // ── Item status logic ─────────────────────────────────────────────────────────
 
 type DisplayStatus =
@@ -157,11 +188,18 @@ const DROP_STATUS_CLS: Record<Drop['status'], string> = {
   archived: 'bg-gray-100 text-gray-400',
 }
 
+function canRemove(dropStatus: Drop['status'], ds: DisplayStatus): boolean {
+  if (dropStatus === 'scheduled') return true
+  if (dropStatus === 'active') return ds.kind === 'listed' || ds.kind === 'reserved'
+  return false
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function DropDetail() {
   const { id: dropId } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const { data: drop, isLoading: loadingDrop, error: dropError } = useQuery({
     queryKey: ['drop', dropId],
@@ -174,6 +212,103 @@ export default function DropDetail() {
     queryFn: () => fetchDropItems(dropId!),
     enabled: !!dropId,
   })
+
+  const isScheduled = drop?.status === 'scheduled'
+
+  const { data: availableProducts = [], isLoading: loadingAvailable } = useQuery({
+    queryKey: ['available-products-for-drop'],
+    queryFn: fetchAvailableProducts,
+    enabled: isScheduled,
+  })
+
+  const [searchInput, setSearchInput] = useState('')
+  const search = useDebounced(searchInput, 250)
+  const [addingId, setAddingId] = useState<string | null>(null)
+  const [addError, setAddError] = useState<string | null>(null)
+
+  const filteredAvailable = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return availableProducts
+    return availableProducts.filter((p) => {
+      const haystack = [p.name, p.brand, p.item_number]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(term)
+    })
+  }, [availableProducts, search])
+
+  async function handleAdd(productId: string) {
+    if (!dropId) return
+    setAddError(null)
+    setAddingId(productId)
+    try {
+      const { error } = await supabase.rpc('publish_product', {
+        p_id: productId,
+        p_drop_id: dropId,
+      })
+      if (error) throw error
+      await queryClient.invalidateQueries({ queryKey: ['drop-items', dropId] })
+      await queryClient.invalidateQueries({ queryKey: ['available-products-for-drop'] })
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Failed to add product')
+    } finally {
+      setAddingId(null)
+    }
+  }
+
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
+
+  const [priceError, setPriceError] = useState<string | null>(null)
+
+  async function handleOverridePrice(item: DropItemRow, raw: string) {
+    if (!dropId) return
+    const trimmed = raw.trim()
+    const next = trimmed && Number(trimmed) > 0 ? Number(trimmed) : null
+    if (next === item.override_price) return
+    setPriceError(null)
+    try {
+      const { error } = await supabase
+        .from('drop_items')
+        .update({ override_price: next })
+        .eq('id', item.id)
+      if (error) throw error
+      await queryClient.invalidateQueries({ queryKey: ['drop-items', dropId] })
+    } catch (err) {
+      setPriceError(err instanceof Error ? err.message : 'Failed to save price')
+    }
+  }
+
+  async function handleRemove(item: DropItemRow) {
+    if (!dropId || !drop) return
+    if (!confirm('Remove this product from the drop?')) return
+    setRemoveError(null)
+    setRemovingId(item.id)
+    try {
+      if (drop.status === 'active') {
+        const { error } = await supabase.rpc('withdraw_product', {
+          p_id: item.product.id,
+        })
+        if (error) throw error
+      } else if (drop.status === 'scheduled') {
+        const { error } = await supabase
+          .from('drop_items')
+          .delete()
+          .eq('id', item.id)
+        if (error) throw error
+      } else {
+        return
+      }
+      await queryClient.invalidateQueries({ queryKey: ['drop-items', dropId] })
+      await queryClient.invalidateQueries({ queryKey: ['available-products-for-drop'] })
+      await queryClient.invalidateQueries({ queryKey: ['products'] })
+    } catch (err) {
+      setRemoveError(err instanceof Error ? err.message : 'Failed to remove')
+    } finally {
+      setRemovingId(null)
+    }
+  }
 
   const soldIds = items.filter(i => i.product.status === 'sold').map(i => i.product.id)
   const listedIds = items.filter(i => i.product.status === 'listed').map(i => i.product.id)
@@ -224,7 +359,7 @@ export default function DropDetail() {
 
       {drop && (
         <>
-          <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-2xl font-bold text-gray-900">
@@ -256,7 +391,23 @@ export default function DropDetail() {
                 )}
               </p>
             </div>
+            {drop.status === 'scheduled' && (
+              <Link
+                to={`/drops/${dropId}/edit`}
+                className="shrink-0 px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+              >
+                Edit
+              </Link>
+            )}
           </div>
+
+          {removeError && (
+            <p className="mb-3 text-xs text-red-600">{removeError}</p>
+          )}
+
+          {priceError && (
+            <p className="mb-3 text-xs text-red-600">{priceError}</p>
+          )}
 
           {items.length === 0 && !loadingItems && (
             <p className="text-sm text-gray-500">No items in this drop.</p>
@@ -273,7 +424,8 @@ export default function DropDetail() {
                     <th className="pb-2 pr-4">Size</th>
                     <th className="pb-2 pr-4">Listed</th>
                     <th className="pb-2 pr-4">Sold price</th>
-                    <th className="pb-2">Status</th>
+                    <th className="pb-2 pr-4">Status</th>
+                    {drop.status !== 'archived' && <th className="pb-2 w-10" />}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -301,11 +453,27 @@ export default function DropDetail() {
                           {item.product.brand ?? item.product.name}
                         </td>
                         <td className="py-2 pr-4 text-gray-600">{item.product.size ?? '—'}</td>
-                        <td className="py-2 pr-4 text-gray-900">{displayPrice} ₴</td>
+                        <td className="py-2 pr-4 text-gray-900">
+                          {drop.status === 'scheduled' ? (
+                            <input
+                              key={`${item.id}:${item.override_price ?? ''}`}
+                              type="number"
+                              min={1}
+                              step={1}
+                              defaultValue={item.override_price ?? ''}
+                              placeholder={`${item.product.price}`}
+                              onBlur={(e) => handleOverridePrice(item, e.target.value)}
+                              title={`Base ${item.product.price} ₴`}
+                              className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                            />
+                          ) : (
+                            <>{displayPrice} ₴</>
+                          )}
+                        </td>
                         <td className="py-2 pr-4 text-gray-900">
                           {ds.kind === 'sold_here' ? `${ds.price} ₴` : '—'}
                         </td>
-                        <td className="py-2">
+                        <td className="py-2 pr-4">
                           <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_CLS[ds.kind]}`}>
                             {STATUS_LABEL[ds.kind]}
                             {ds.kind === 'reserved' && (
@@ -313,12 +481,102 @@ export default function DropDetail() {
                             )}
                           </span>
                         </td>
+                        {drop.status !== 'archived' && (
+                          <td className="py-2 text-right">
+                            {canRemove(drop.status, ds) && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemove(item)}
+                                disabled={removingId === item.id || ds.kind === 'reserved'}
+                                title={ds.kind === 'reserved' ? 'Item is in cart' : 'Remove from drop'}
+                                aria-label="Remove"
+                                className="px-2 py-0.5 text-xs text-red-600 border border-red-200 rounded hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                {removingId === item.id ? '…' : '×'}
+                              </button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
             </div>
+          )}
+
+          {isScheduled && (
+            <section className="mt-8 border-t border-gray-200 pt-6">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-3">
+                Add product
+              </h2>
+
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search by name, brand or #"
+                className="w-full max-w-md border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 mb-3"
+              />
+
+              {addError && (
+                <p className="text-xs text-red-600 mb-2">{addError}</p>
+              )}
+
+              {loadingAvailable && (
+                <p className="text-sm text-gray-500">Loading products…</p>
+              )}
+
+              {!loadingAvailable && availableProducts.length === 0 && (
+                <p className="text-sm text-gray-500">No in-stock products available.</p>
+              )}
+
+              {!loadingAvailable && availableProducts.length > 0 && filteredAvailable.length === 0 && (
+                <p className="text-sm text-gray-500">No products match your search.</p>
+              )}
+
+              {filteredAvailable.length > 0 && (
+                <div className="border border-gray-200 rounded divide-y divide-gray-100 max-h-80 overflow-y-auto">
+                  {filteredAvailable.map((p) => {
+                    const thumb = [...p.product_images].sort((a, b) => a.position - b.position)[0]
+                    const busy = addingId === p.id
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleAdd(p.id)}
+                        disabled={!!addingId}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {thumb ? (
+                          <img
+                            src={supabase.storage.from('product-images').getPublicUrl(thumb.storage_path).data.publicUrl}
+                            alt=""
+                            className="h-10 w-10 object-cover rounded border border-gray-200 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded border border-gray-200 bg-gray-100 flex-shrink-0 flex items-center justify-center text-[9px] uppercase tracking-wide text-gray-400">
+                            no photo
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {p.brand ?? p.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {p.size ?? '—'} · {p.price} ₴
+                            {p.item_number && <> · #{p.item_number}</>}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-xs text-gray-500">
+                          {busy ? 'Adding…' : '+ Add'}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
           )}
         </>
       )}
