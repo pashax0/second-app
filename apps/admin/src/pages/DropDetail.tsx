@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase'
 
 interface Drop {
   id: string
-  title: string | null
+  title: string
   description: string | null
   status: 'scheduled' | 'active' | 'archived'
   scheduled_at: string
@@ -465,7 +465,7 @@ export default function DropDetail() {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {drop.title ?? '(untitled)'}
+                  {drop.title}
                 </h1>
                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${DROP_STATUS_CLS[drop.status]}`}>
                   {drop.status.charAt(0).toUpperCase() + drop.status.slice(1)}

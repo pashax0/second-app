@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 
 interface DropRow {
   id: string
-  title: string | null
+  title: string
   status: 'scheduled' | 'active' | 'archived'
   scheduled_at: string
   published_at: string | null
@@ -75,7 +75,7 @@ export default function Drops() {
     let rows = drops
     if (tab !== 'all') rows = rows.filter((d) => d.status === tab)
     const term = search.trim().toLowerCase()
-    if (term) rows = rows.filter((d) => (d.title ?? '').toLowerCase().includes(term))
+    if (term) rows = rows.filter((d) => d.title.toLowerCase().includes(term))
     return rows
   }, [drops, tab, search])
 
@@ -98,12 +98,12 @@ export default function Drops() {
     const activeCount = active?.drop_items[0]?.count ?? 0
 
     const lines = [
-      `Activate "${drop.title ?? '(untitled)'}" (${itemCount} item${itemCount === 1 ? '' : 's'})?`,
+      `Activate "${drop.title}" (${itemCount} item${itemCount === 1 ? '' : 's'})?`,
       '',
     ]
     if (active) {
       lines.push('This will archive the current active drop:')
-      lines.push(`"${active.title ?? '(untitled)'}" (${activeCount} item${activeCount === 1 ? '' : 's'})`)
+      lines.push(`"${active.title}" (${activeCount} item${activeCount === 1 ? '' : 's'})`)
     } else {
       lines.push('No active drop to archive.')
     }
@@ -201,7 +201,7 @@ export default function Drops() {
                         onClick={() => navigate(`/drops/${drop.id}`)}
                         className="hover:underline text-left"
                       >
-                        {drop.title ?? '(untitled)'}
+                        {drop.title}
                       </button>
                     </td>
                     <td className="py-3 pr-4 text-gray-600">{itemCount}</td>

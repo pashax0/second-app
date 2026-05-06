@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabase'
 
 interface Drop {
   id: string
-  title: string | null
+  title: string
   description: string | null
   status: 'scheduled' | 'active' | 'archived'
   scheduled_at: string
@@ -62,7 +62,7 @@ export default function EditDrop() {
   useEffect(() => {
     if (!drop) return
     reset({
-      title: drop.title ?? '',
+      title: drop.title,
       description: drop.description ?? '',
       scheduled_at: toLocalDatetimeInput(new Date(drop.scheduled_at)),
     })

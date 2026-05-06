@@ -59,9 +59,10 @@ on conflict (id) do update set
 
 -- ── Drops ───────────────────────────────────────────────────────────────────
 
-insert into public.drops (id, description, scheduled_at, published_at, status) values
+insert into public.drops (id, title, description, scheduled_at, published_at, status) values
   (
     'aaaaaaaa-0000-0000-0000-000000000001',
+    'Drop #1',
     null,
     now() - interval '14 days',
     now() - interval '14 days',
@@ -69,6 +70,7 @@ insert into public.drops (id, description, scheduled_at, published_at, status) v
   ),
   (
     'aaaaaaaa-0000-0000-0000-000000000002',
+    'PLT London',
     'Сток от крутого английского бренда Pretty Little Thing London ❤️',
     now() - interval '7 days',
     now() - interval '7 days',
@@ -76,12 +78,14 @@ insert into public.drops (id, description, scheduled_at, published_at, status) v
   ),
   (
     'aaaaaaaa-0000-0000-0000-000000000003',
+    'Drop #3',
     null,
     now(),
     now(),
     'active'
   )
 on conflict (id) do update set
+  title        = excluded.title,
   description  = excluded.description,
   scheduled_at = excluded.scheduled_at,
   published_at = excluded.published_at,

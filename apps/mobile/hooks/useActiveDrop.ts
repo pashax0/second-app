@@ -43,7 +43,7 @@ export type DropItem = {
 
 export type ActiveDrop = {
   id: string;
-  title: string | null;
+  title: string;
   description: string | null;
   scheduled_at: string;
   published_at: string | null;

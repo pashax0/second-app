@@ -65,7 +65,7 @@ create index on public.product_images (product_id, position);
 -- drops: a daily drop event
 create table public.drops (
   id                uuid primary key default gen_random_uuid(),
-  title             text,
+  title             text not null,
   description       text,           -- optional header shown above the item grid
   scheduled_at      timestamptz not null,
   published_at      timestamptz,
