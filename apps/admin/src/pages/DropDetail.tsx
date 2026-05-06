@@ -298,6 +298,63 @@ export default function DropDetail() {
     }
   }
 
+  const [archiving, setArchiving] = useState(false)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
+
+  const [movingId, setMovingId] = useState<string | null>(null)
+  const [moveError, setMoveError] = useState<string | null>(null)
+
+  async function handleMove(item: DropItemRow, direction: 'up' | 'down') {
+    if (!dropId || drop?.status !== 'scheduled') return
+    const idx = items.findIndex((i) => i.id === item.id)
+    if (idx < 0) return
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (targetIdx < 0 || targetIdx >= items.length) return
+    const target = items[targetIdx]
+    setMoveError(null)
+    setMovingId(item.id)
+    try {
+      const { error: e1 } = await supabase
+        .from('drop_items')
+        .update({ position: target.position })
+        .eq('id', item.id)
+      if (e1) throw e1
+      const { error: e2 } = await supabase
+        .from('drop_items')
+        .update({ position: item.position })
+        .eq('id', target.id)
+      if (e2) throw e2
+      await queryClient.invalidateQueries({ queryKey: ['drop-items', dropId] })
+    } catch (err) {
+      setMoveError(err instanceof Error ? err.message : 'Failed to reorder')
+    } finally {
+      setMovingId(null)
+    }
+  }
+
+  async function handleArchive() {
+    if (!dropId || !drop || drop.status !== 'active') return
+    const unsold = items.filter((i) => i.product.status === 'listed').length
+    const msg = unsold > 0
+      ? `Archive this drop? ${unsold} unsold item${unsold === 1 ? '' : 's'} will return to stock.`
+      : 'Archive this drop?'
+    if (!confirm(msg)) return
+    setArchiveError(null)
+    setArchiving(true)
+    try {
+      const { error } = await supabase.rpc('archive_drop', { p_drop_id: dropId })
+      if (error) throw error
+      await queryClient.invalidateQueries({ queryKey: ['drop', dropId] })
+      await queryClient.invalidateQueries({ queryKey: ['drop-items', dropId] })
+      await queryClient.invalidateQueries({ queryKey: ['drops'] })
+      await queryClient.invalidateQueries({ queryKey: ['products'] })
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : 'Failed to archive')
+    } finally {
+      setArchiving(false)
+    }
+  }
+
   async function handleRemove(item: DropItemRow) {
     if (!dropId || !drop) return
     if (!confirm('Remove this product from the drop?')) return
@@ -412,7 +469,21 @@ export default function DropDetail() {
                 Edit
               </Link>
             )}
+            {drop.status === 'active' && (
+              <button
+                type="button"
+                onClick={handleArchive}
+                disabled={archiving}
+                className="shrink-0 px-3 py-1.5 text-sm border border-rose-300 text-rose-700 rounded hover:bg-rose-50 disabled:opacity-40"
+              >
+                {archiving ? 'Archiving…' : 'Archive'}
+              </button>
+            )}
           </div>
+
+          {archiveError && (
+            <p className="mb-3 text-xs text-red-600">{archiveError}</p>
+          )}
 
           {removeError && (
             <p className="mb-3 text-xs text-red-600">{removeError}</p>
@@ -420,6 +491,10 @@ export default function DropDetail() {
 
           {priceError && (
             <p className="mb-3 text-xs text-red-600">{priceError}</p>
+          )}
+
+          {moveError && (
+            <p className="mb-3 text-xs text-red-600">{moveError}</p>
           )}
 
           {items.length === 0 && !loadingItems && (
@@ -443,16 +518,44 @@ export default function DropDetail() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {items.map((item) => {
+                  {items.map((item, idx) => {
                     const ds = resolveStatus(item, dropId!, orderMap, reservationMap)
                     const thumb = [...item.product.product_images]
                       .sort((a, b) => a.position - b.position)[0]
                     const effectivePrice = item.override_price ?? item.product.price
                     const isPromo = item.compare_at_price != null && item.compare_at_price > effectivePrice
+                    const canReorder = drop.status === 'scheduled'
+                    const moving = movingId === item.id
 
                     return (
                       <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="py-2 pr-4 text-gray-400 text-xs">{item.position}</td>
+                        <td className="py-2 pr-4 text-gray-400 text-xs">
+                          {canReorder ? (
+                            <div className="flex flex-col items-center leading-none">
+                              <button
+                                type="button"
+                                onClick={() => handleMove(item, 'up')}
+                                disabled={idx === 0 || moving}
+                                aria-label="Move up"
+                                className="px-1 text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                ▲
+                              </button>
+                              <span className="text-[10px]">{idx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleMove(item, 'down')}
+                                disabled={idx === items.length - 1 || moving}
+                                aria-label="Move down"
+                                className="px-1 text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                ▼
+                              </button>
+                            </div>
+                          ) : (
+                            item.position
+                          )}
+                        </td>
                         <td className="py-2 pr-4">
                           {thumb ? (
                             <img
