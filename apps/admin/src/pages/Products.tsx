@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useRealtimeInvalidation } from '../lib/useRealtimeInvalidation'
@@ -136,6 +136,7 @@ function useDebounced<T>(value: T, delay = 300): T {
 
 export default function Products() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('all')
   const [subFilter, setSubFilter] = useState<SubFilter>(null)
@@ -288,7 +289,11 @@ export default function Products() {
                   .sort((a, b) => a.position - b.position)[0]
 
                 return (
-                  <tr key={p.id} className="hover:bg-gray-50">
+                  <tr
+                    key={p.id}
+                    onClick={() => navigate(`/products/${p.id}/edit`)}
+                    className="hover:bg-gray-50 cursor-pointer"
+                  >
                     <td className="py-2 pr-4">
                       {thumb ? (
                         <img
@@ -335,15 +340,12 @@ export default function Products() {
                       </div>
                     </td>
                     <td className="py-2 text-right whitespace-nowrap">
-                      <Link
-                        to={`/products/${p.id}/edit`}
-                        className="text-xs text-gray-600 hover:text-gray-900 mr-3"
-                      >
-                        Edit
-                      </Link>
                       {p.status === 'in_stock' && (
                         <button
-                          onClick={() => handleDelete(p.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDelete(p.id)
+                          }}
                           disabled={deletingId === p.id}
                           className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40"
                         >

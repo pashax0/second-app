@@ -152,6 +152,8 @@ export default function EditProduct() {
   const [withdrawError, setWithdrawError] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [publishError, setPublishError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useRealtimeInvalidation(
     id
@@ -340,6 +342,25 @@ export default function EditProduct() {
     }
   }
 
+  async function handleDelete() {
+    if (!id) return
+    if (!confirm('Удалить этот товар?')) return
+
+    setDeleteError(null)
+    setDeleting(true)
+    try {
+      const { error } = await supabase.rpc('delete_product', { p_id: id })
+      if (error) throw error
+
+      await queryClient.invalidateQueries({ queryKey: ['products'] })
+      navigate('/products')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Delete failed')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   async function handleWithdraw() {
     if (!id || !activeDropItem) return
     if (reservation) return
@@ -386,36 +407,52 @@ export default function EditProduct() {
     <div className="max-w-xl">
       <div className="flex items-start justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
-        {product.status === 'listed' && activeDropItem && (
-          <button
-            type="button"
-            onClick={handleWithdraw}
-            disabled={withdrawing || !!reservation}
-            title={reservation ? `В корзине до ${reservationExpiresText}` : undefined}
-            className="shrink-0 px-3 py-1.5 text-sm border border-red-300 text-red-600 rounded hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {withdrawing ? 'Убираем…' : 'Убрать с витрины'}
-          </button>
-        )}
-        {product.status === 'in_stock' && activeDrop && (
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={publishing}
-            className="shrink-0 px-3 py-1.5 text-sm border border-green-400 text-green-700 rounded hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {publishing ? 'Публикуем…' : 'Добавить на витрину'}
-          </button>
-        )}
-        {product.status === 'in_stock' && !activeDrop && (
-          <span className="shrink-0 text-xs text-gray-500 self-center">
-            Нет активного дропа
-          </span>
-        )}
+        <div className="shrink-0 flex items-center gap-2">
+          {product.status === 'listed' && activeDropItem && (
+            <button
+              type="button"
+              onClick={handleWithdraw}
+              disabled={withdrawing || !!reservation}
+              title={reservation ? `В корзине до ${reservationExpiresText}` : undefined}
+              className="px-3 py-1.5 text-sm border border-red-300 text-red-600 rounded hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {withdrawing ? 'Убираем…' : 'Убрать с витрины'}
+            </button>
+          )}
+          {product.status === 'in_stock' && activeDrop && (
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={publishing}
+              className="px-3 py-1.5 text-sm border border-green-400 text-green-700 rounded hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {publishing ? 'Публикуем…' : 'Добавить на витрину'}
+            </button>
+          )}
+          {product.status === 'in_stock' && !activeDrop && (
+            <span className="text-xs text-gray-500 self-center">
+              Нет активного дропа
+            </span>
+          )}
+          {product.status === 'in_stock' && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-3 py-1.5 text-sm border border-red-300 text-red-600 rounded hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {deleting ? 'Удаляем…' : 'Удалить'}
+            </button>
+          )}
+        </div>
       </div>
 
       {publishError && (
         <p className="mb-4 text-sm text-red-600">{publishError}</p>
+      )}
+
+      {deleteError && (
+        <p className="mb-4 text-sm text-red-600">{deleteError}</p>
       )}
 
       {product.status === 'sold' && (

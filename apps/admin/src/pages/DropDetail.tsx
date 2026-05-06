@@ -301,6 +301,9 @@ export default function DropDetail() {
   const [archiving, setArchiving] = useState(false)
   const [archiveError, setArchiveError] = useState<string | null>(null)
 
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
   const [movingId, setMovingId] = useState<string | null>(null)
   const [moveError, setMoveError] = useState<string | null>(null)
 
@@ -329,6 +332,30 @@ export default function DropDetail() {
       setMoveError(err instanceof Error ? err.message : 'Failed to reorder')
     } finally {
       setMovingId(null)
+    }
+  }
+
+  async function handleDelete() {
+    if (!dropId || !drop || drop.status !== 'scheduled') return
+    const itemCount = items.length
+    const msg = itemCount > 0
+      ? `Delete this scheduled drop? ${itemCount} item${itemCount === 1 ? '' : 's'} will be unscheduled and return to In stock.`
+      : 'Delete this scheduled drop?'
+    if (!confirm(msg)) return
+    setDeleteError(null)
+    setDeleting(true)
+    try {
+      const { error } = await supabase
+        .from('drops')
+        .delete()
+        .eq('id', dropId)
+      if (error) throw error
+      await queryClient.invalidateQueries({ queryKey: ['drops'] })
+      await queryClient.invalidateQueries({ queryKey: ['products'] })
+      navigate('/drops')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete')
+      setDeleting(false)
     }
   }
 
@@ -462,12 +489,22 @@ export default function DropDetail() {
               </p>
             </div>
             {drop.status === 'scheduled' && (
-              <Link
-                to={`/drops/${dropId}/edit`}
-                className="shrink-0 px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
-              >
-                Edit
-              </Link>
+              <div className="shrink-0 flex items-center gap-2">
+                <Link
+                  to={`/drops/${dropId}/edit`}
+                  className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+                >
+                  Edit
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-3 py-1.5 text-sm border border-rose-300 text-rose-700 rounded hover:bg-rose-50 disabled:opacity-40"
+                >
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
             )}
             {drop.status === 'active' && (
               <button
@@ -483,6 +520,10 @@ export default function DropDetail() {
 
           {archiveError && (
             <p className="mb-3 text-xs text-red-600">{archiveError}</p>
+          )}
+
+          {deleteError && (
+            <p className="mb-3 text-xs text-red-600">{deleteError}</p>
           )}
 
           {removeError && (
@@ -528,13 +569,20 @@ export default function DropDetail() {
                     const moving = movingId === item.id
 
                     return (
-                      <tr key={item.id} className="hover:bg-gray-50">
+                      <tr
+                        key={item.id}
+                        onClick={() => navigate(`/products/${item.product.id}/edit`)}
+                        className="hover:bg-gray-50 cursor-pointer"
+                      >
                         <td className="py-2 pr-4 text-gray-400 text-xs">
                           {canReorder ? (
                             <div className="flex flex-col items-center leading-none">
                               <button
                                 type="button"
-                                onClick={() => handleMove(item, 'up')}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleMove(item, 'up')
+                                }}
                                 disabled={idx === 0 || moving}
                                 aria-label="Move up"
                                 className="px-1 text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -544,7 +592,10 @@ export default function DropDetail() {
                               <span className="text-[10px]">{idx + 1}</span>
                               <button
                                 type="button"
-                                onClick={() => handleMove(item, 'down')}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleMove(item, 'down')
+                                }}
                                 disabled={idx === items.length - 1 || moving}
                                 aria-label="Move down"
                                 className="px-1 text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -580,6 +631,7 @@ export default function DropDetail() {
                               step={1}
                               defaultValue={item.override_price ?? ''}
                               placeholder={`${item.product.price}`}
+                              onClick={(e) => e.stopPropagation()}
                               onBlur={(e) => handleOverridePrice(item, e.target.value)}
                               title={`Base ${item.product.price} ₴`}
                               className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
@@ -597,6 +649,7 @@ export default function DropDetail() {
                               step={1}
                               defaultValue={item.compare_at_price ?? ''}
                               placeholder="—"
+                              onClick={(e) => e.stopPropagation()}
                               onBlur={(e) => handleCompareAtPrice(item, e.target.value)}
                               title="Compare-at — strikethrough + promo badge if > price"
                               className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
@@ -628,7 +681,10 @@ export default function DropDetail() {
                             {canRemove(drop.status, ds) && (
                               <button
                                 type="button"
-                                onClick={() => handleRemove(item)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRemove(item)
+                                }}
                                 disabled={removingId === item.id || ds.kind === 'reserved'}
                                 title={ds.kind === 'reserved' ? 'Item is in cart' : 'Remove from drop'}
                                 aria-label="Remove"
