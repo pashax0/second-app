@@ -124,7 +124,7 @@
 - [x] Шаг 13: удаление scheduled-дропа
 - [x] Шаг 14: превью при публикации
 - [x] Шаг 15: обязательное название дропа
-- [ ] Шаг 16: автопубликация по scheduled_at (needs design)
+- [x] Шаг 16: автопубликация по scheduled_at (см. [ADR-005](../decisions/ADR-005-auto-publish-drops.md))
 
 ## Follow-up: доступ в админку
 

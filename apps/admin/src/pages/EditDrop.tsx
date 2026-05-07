@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import DatePicker from 'react-datepicker'
 import { supabase } from '../../lib/supabase'
 
 interface Drop {
@@ -17,15 +18,10 @@ interface Drop {
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  scheduled_at: z.string().min(1, 'Scheduled date is required'),
+  scheduled_at: z.date({ message: 'Scheduled date is required' }),
 })
 
 type FormValues = z.infer<typeof schema>
-
-function toLocalDatetimeInput(d: Date): string {
-  const offsetMs = d.getTimezoneOffset() * 60_000
-  return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16)
-}
 
 async function fetchDrop(dropId: string): Promise<Drop> {
   const { data, error } = await supabase
@@ -52,11 +48,12 @@ export default function EditDrop() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
     setError,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { title: '', description: '', scheduled_at: '' },
+    defaultValues: { title: '', description: '', scheduled_at: new Date() },
   })
 
   useEffect(() => {
@@ -64,7 +61,7 @@ export default function EditDrop() {
     reset({
       title: drop.title,
       description: drop.description ?? '',
-      scheduled_at: toLocalDatetimeInput(new Date(drop.scheduled_at)),
+      scheduled_at: new Date(drop.scheduled_at),
     })
   }, [drop, reset])
 
@@ -76,12 +73,17 @@ export default function EditDrop() {
       .update({
         title: values.title,
         description: values.description || null,
-        scheduled_at: new Date(values.scheduled_at).toISOString(),
+        scheduled_at: values.scheduled_at.toISOString(),
       })
       .eq('id', dropId)
 
     if (updateError) {
-      setError('root', { message: updateError.message })
+      setError('root', {
+        message:
+          updateError.code === '23505'
+            ? 'Another drop is already scheduled for this time'
+            : updateError.message,
+      })
       return
     }
 
@@ -151,10 +153,23 @@ export default function EditDrop() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Scheduled date <span className="text-red-500">*</span>
           </label>
-          <input
-            type="datetime-local"
-            {...register('scheduled_at')}
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          <Controller
+            control={control}
+            name="scheduled_at"
+            render={({ field }) => (
+              <DatePicker
+                selected={field.value}
+                onChange={(d: Date | null) => field.onChange(d)}
+                showTimeSelect
+                timeIntervals={5}
+                calendarStartDay={1}
+                dateFormat="dd.MM.yyyy, HH:mm"
+                timeFormat="HH:mm"
+                portalId="datepicker-portal"
+                popperPlacement="bottom-start"
+                className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+              />
+            )}
           />
           {errors.scheduled_at && (
             <p className="text-xs text-red-500 mt-1">{errors.scheduled_at.message}</p>

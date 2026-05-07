@@ -75,18 +75,23 @@ $$;
 -- ── activate_drop ──────────────────────────────────────────────────────────
 -- Atomically: archive current active drop (revert its unsold products),
 -- then activate target scheduled drop (its products become 'listed').
-create or replace function public.activate_drop(p_drop_id uuid)
+--
+-- Body is factored into _activate_drop_body so manual Publish (this RPC) and
+-- auto-publish (auto_activate_due_drops) execute identical logic.
+create or replace function public._activate_drop_body(p_drop_id uuid)
 returns void language plpgsql security definer set search_path = public as $$
 declare
   v_target_status text;
   v_prev_active   uuid;
 begin
-  if not public.is_admin() then raise exception 'unauthorized'; end if;
-
   select status into v_target_status from public.drops where id = p_drop_id;
   if not found then raise exception 'drop_not_found'; end if;
   if v_target_status <> 'scheduled' then
     raise exception 'drop_not_scheduled';
+  end if;
+
+  if not exists (select 1 from public.drop_items where drop_id = p_drop_id) then
+    raise exception 'drop_empty';
   end if;
 
   select id into v_prev_active from public.drops where status = 'active';
@@ -103,6 +108,39 @@ begin
   update public.products set status = 'listed'
   where id in (select product_id from public.drop_items where drop_id = p_drop_id)
     and status = 'in_stock';
+end;
+$$;
+
+create or replace function public.activate_drop(p_drop_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'unauthorized'; end if;
+  perform public._activate_drop_body(p_drop_id);
+end;
+$$;
+
+-- ── auto_activate_due_drops ────────────────────────────────────────────────
+-- Cron entrypoint: walks every scheduled drop whose scheduled_at has passed
+-- and activates it via the same body the admin button uses. Failures of one
+-- drop don't block the others. The partial unique index on
+-- drops(scheduled_at) where status='scheduled' guarantees no two due drops
+-- share a moment.
+create or replace function public.auto_activate_due_drops()
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_id uuid;
+begin
+  for v_id in
+    select id from public.drops
+    where status = 'scheduled' and scheduled_at <= now()
+    order by scheduled_at asc
+  loop
+    begin
+      perform public._activate_drop_body(v_id);
+    exception when others then
+      raise warning 'auto_activate_due_drops: drop % skipped (%)', v_id, sqlerrm;
+    end;
+  end loop;
 end;
 $$;
 
@@ -338,6 +376,8 @@ $$;
 revoke all on function public.publish_product(uuid, uuid)               from public;
 revoke all on function public.withdraw_product(uuid)                    from public;
 revoke all on function public.activate_drop(uuid)                       from public;
+revoke all on function public._activate_drop_body(uuid)                 from public;
+revoke all on function public.auto_activate_due_drops()                 from public;
 revoke all on function public.archive_drop(uuid)                        from public;
 revoke all on function public.complete_order(uuid)                      from public;
 revoke all on function public.cancel_order(uuid, text, text)            from public;

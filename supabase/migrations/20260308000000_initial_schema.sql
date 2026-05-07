@@ -1,3 +1,8 @@
+-- pg_cron: schedules periodic jobs (reservation expiry, drop auto-publish).
+-- Preloaded via shared_preload_libraries on both Supabase hosted and local CLI;
+-- needs an explicit create extension to expose the cron schema.
+create extension if not exists pg_cron with schema extensions;
+
 -- profiles: extends auth.users
 create table public.profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
@@ -75,6 +80,12 @@ create table public.drops (
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
+
+-- At most one scheduled drop per moment in time.
+-- Active/archived drops keep historical scheduled_at and are not constrained.
+create unique index drops_scheduled_at_unique
+  on public.drops (scheduled_at)
+  where status = 'scheduled';
 
 -- drop_items: which products are in a drop, with optional price overrides
 -- override_price:    silent layer — what the customer pays in this drop (falls back to products.price)
@@ -240,16 +251,19 @@ end;
 $$;
 
 -- pg_cron fallback: cleans up reservations that nobody expired client-side (case E in ADR-004).
--- Requires pg_cron extension; silently skipped if unavailable (e.g. local dev without pg_cron).
-do $outer$ begin
-  perform cron.schedule(
-    'expire-reservations',
-    '*/5 * * * *',
-    'delete from public.reservations where expires_at < now()'
-  );
-exception when others then
-  null;
-end $outer$;
+select cron.schedule(
+  'expire-reservations',
+  '*/5 * * * *',
+  'delete from public.reservations where expires_at < now()'
+);
+
+-- Auto-publish scheduled drops once their scheduled_at has passed.
+-- Same path as manual Publish (calls _activate_drop_body, see lifecycle_rpcs.sql).
+select cron.schedule(
+  'auto-activate-drops',
+  '*/5 * * * *',
+  'select public.auto_activate_due_drops()'
+);
 
 -- Transfer non-expired reservations from an anonymous user to the currently signed-in user.
 -- Used when an anonymous user signs into an existing account.

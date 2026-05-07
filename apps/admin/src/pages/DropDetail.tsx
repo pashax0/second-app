@@ -384,6 +384,12 @@ export default function DropDetail() {
 
   async function handleRemove(item: DropItemRow) {
     if (!dropId || !drop) return
+    if (drop.status === 'scheduled' && items.length === 1) {
+      setRemoveError(
+        'A scheduled drop must have at least one product. Add another product first or delete the drop.',
+      )
+      return
+    }
     if (!confirm('Remove this product from the drop?')) return
     setRemoveError(null)
     setRemovingId(item.id)

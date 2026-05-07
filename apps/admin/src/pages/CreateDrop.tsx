@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import DatePicker from 'react-datepicker'
 import { supabase } from '../../lib/supabase'
 import { CONDITION_OPTIONS } from '../components/ProductForm'
 
@@ -38,25 +39,16 @@ function useDebounced<T>(value: T, delay = 300): T {
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  scheduled_at: z.string().min(1, 'Scheduled date is required'),
+  scheduled_at: z.date({ message: 'Scheduled date is required' }),
 })
 
 type FormValues = z.infer<typeof schema>
 
-function toLocalDatetimeInput(d: Date): string {
-  const offsetMs = d.getTimezoneOffset() * 60_000
-  return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16)
-}
-
-function nowLocal(): string {
-  return toLocalDatetimeInput(new Date())
-}
-
-function nextHourLocal(): string {
+function nextHour(): Date {
   const d = new Date()
   d.setMinutes(0, 0, 0)
   d.setHours(d.getHours() + 1)
-  return toLocalDatetimeInput(d)
+  return d
 }
 
 async function fetchInStockProducts(): Promise<Product[]> {
@@ -128,10 +120,11 @@ export default function CreateDrop() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { scheduled_at: nextHourLocal() },
+    defaultValues: { scheduled_at: nextHour() },
   })
 
   function toggleProduct(id: string) {
@@ -170,7 +163,7 @@ export default function CreateDrop() {
         .insert({
           title: values.title,
           description: values.description || null,
-          scheduled_at: new Date(values.scheduled_at).toISOString(),
+          scheduled_at: values.scheduled_at.toISOString(),
           status: 'scheduled',
         })
         .select('id')
@@ -195,7 +188,12 @@ export default function CreateDrop() {
 
       navigate('/drops')
     } catch (err) {
-      setSubmitError((err as Error).message)
+      const e = err as { code?: string; message: string }
+      setSubmitError(
+        e.code === '23505'
+          ? 'Another drop is already scheduled for this time'
+          : e.message,
+      )
     } finally {
       setSaving(false)
     }
@@ -236,11 +234,24 @@ export default function CreateDrop() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Scheduled date <span className="text-red-500">*</span>
           </label>
-          <input
-            type="datetime-local"
-            min={nowLocal()}
-            {...register('scheduled_at')}
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+          <Controller
+            control={control}
+            name="scheduled_at"
+            render={({ field }) => (
+              <DatePicker
+                selected={field.value}
+                onChange={(d: Date | null) => field.onChange(d)}
+                showTimeSelect
+                timeIntervals={5}
+                calendarStartDay={1}
+                minDate={new Date()}
+                dateFormat="dd.MM.yyyy, HH:mm"
+                timeFormat="HH:mm"
+                portalId="datepicker-portal"
+                popperPlacement="bottom-start"
+                className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+              />
+            )}
           />
           {errors.scheduled_at && (
             <p className="text-xs text-red-500 mt-1">{errors.scheduled_at.message}</p>
