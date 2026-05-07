@@ -84,6 +84,7 @@ export default function CheckoutScreen() {
       queryClient.invalidateQueries({ queryKey: queryKeys.drops.active() });
       setOrderId(id);
     },
+    meta: { silent: true },
   });
 
   if (orderId) {

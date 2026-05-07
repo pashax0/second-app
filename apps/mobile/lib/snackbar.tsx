@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text } from 'react-native';
 
 type SnackbarOptions = {
   duration?: number;
@@ -10,6 +10,17 @@ type SnackbarContextValue = {
 };
 
 const SnackbarContext = createContext<SnackbarContextValue | null>(null);
+
+// Module-level handle so non-React code (e.g. TanStack Query cache callbacks)
+// can show snackbars. SnackbarProvider registers its show fn on mount.
+let activeShow: SnackbarContextValue['show'] | null = null;
+
+export const toast = {
+  show(message: string, options?: SnackbarOptions) {
+    if (activeShow) activeShow(message, options);
+    else if (__DEV__) console.warn('[snackbar] no active provider, dropped:', message);
+  },
+};
 
 export function useSnackbar() {
   const ctx = useContext(SnackbarContext);
@@ -56,13 +67,19 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    activeShow = show;
+    return () => {
+      if (activeShow === show) activeShow = null;
+    };
+  }, [show]);
+
   return (
     <SnackbarContext.Provider value={{ show }}>
       {children}
       {visible && (
         <Animated.View
-          style={{ opacity, transform: [{ translateY }] }}
-          className="absolute bottom-8 left-4 right-4 bg-gray-900 rounded-xl px-4 py-3 shadow-lg"
+          style={[styles.container, { opacity, transform: [{ translateY }] }]}
           pointerEvents="none"
         >
           <Text className="text-white text-sm text-center">{message}</Text>
@@ -71,3 +88,22 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     </SnackbarContext.Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 32,
+    left: 16,
+    right: 16,
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    // Shadow (iOS) / elevation (Android)
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+});

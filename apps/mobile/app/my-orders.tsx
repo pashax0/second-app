@@ -65,6 +65,7 @@ export default function MyOrdersScreen() {
     queryKey: queryKeys.orders.my(),
     queryFn: user ? () => fetchMyOrders(user.id) : undefined,
     enabled: !!user,
+    meta: { silent: true },
   });
 
   if (isLoading) {

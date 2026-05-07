@@ -61,14 +61,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initialize: () => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Validate the locally-cached session against the server before trusting it.
+    // getSession() only reads from storage — it doesn't catch a stale JWT whose
+    // `sub` references a user that has been deleted/revoked server-side
+    // (e.g. after `db reset` in dev, or admin-side user deletion in prod).
+    // getUser() makes an authoritative round-trip to GoTrue.
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (session) {
+        const { error } = await supabase.auth.getUser()
+        if (error && !isOfflineAuthError(error)) {
+          // Server actively rejected the session (user gone / revoked).
+          // signOut clears local storage; the onAuthStateChange listener below
+          // will fire SIGNED_OUT and reset the store.
+          await supabase.auth.signOut()
+          return
+        }
+      }
+
       set({
         session,
         user: session?.user ?? null,
         isAnonymous: session?.user?.is_anonymous ?? false,
         isLoading: false,
       })
-    })
+    })()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       set({
@@ -82,3 +100,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return () => subscription.unsubscribe()
   },
 }))
+
+// AuthRetryableFetchError fires for network/timeout — keep cached session in
+// that case so the app stays usable offline.
+function isOfflineAuthError(err: { name?: string; message?: string }): boolean {
+  if (err.name === 'AuthRetryableFetchError') return true
+  return /network|fetch failed|timeout/i.test(err.message ?? '')
+}

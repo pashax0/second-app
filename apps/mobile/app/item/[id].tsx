@@ -7,7 +7,8 @@ import { useReservations, useExpiryTrigger, type Reservation } from '../../hooks
 import { useAddToCart, useRemoveFromCart } from '../../hooks/useCart';
 import { useAuthStore } from '../../stores/auth';
 import { RegistrationGateSheet } from '../../components/RegistrationGateSheet';
-import { useSnackbar } from '../../lib/snackbar';
+import { toast } from '../../lib/snackbar';
+import { formatError, isStaleSessionError } from '../../lib/errors';
 
 function formatMeasurements(m: Measurements | null): string {
   if (!m) return '';
@@ -144,7 +145,6 @@ function ItemCard({
   const { mutate: addToCart, isPending: isAdding } = useAddToCart();
   const { mutate: removeFromCart, isPending: isRemoving } = useRemoveFromCart();
   const countdown = useCountdown(reservation?.expires_at);
-  const { show: showSnackbar } = useSnackbar();
 
   const isSold = product.status === 'sold';
   const isMyReservation = !!reservation && reservation.user_id === user?.id;
@@ -156,9 +156,11 @@ function ItemCard({
       onError: (err) => {
         if (err instanceof Error && err.message === 'anon_cart_limit') {
           onAnonCartLimit();
-        } else {
-          showSnackbar('Что-то пошло не так');
+          return;
         }
+        // Stale session: global handler runs sign-out + toast for us.
+        if (isStaleSessionError(err)) return;
+        toast.show(formatError(err));
       },
     });
   };

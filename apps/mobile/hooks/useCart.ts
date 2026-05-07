@@ -40,6 +40,7 @@ type ReservationRow = {
 export function useMyCart() {
   return useQuery({
     queryKey: queryKeys.reservations.mine(),
+    meta: { silent: true },
     queryFn: async (): Promise<CartItem[]> => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return [];
@@ -81,6 +82,7 @@ export function useAddToCart() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { silent: true },
     mutationFn: async ({ productId, dropId }: { productId: string; dropId: string }) => {
       // Get current session; sign in anonymously if none exists
       let { data: { session } } = await supabase.auth.getSession();

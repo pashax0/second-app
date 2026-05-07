@@ -11,6 +11,10 @@
     "supabase-cloud": {
       "command": "npx",
       "args": ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "sbp_abb02e2b6c6b92cbd91cca60b3c61a5247970448"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest", "--output-dir", ".playwright-mcp"]
     }
   }
 }

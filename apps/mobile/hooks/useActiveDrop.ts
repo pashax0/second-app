@@ -103,6 +103,7 @@ export function useActiveDrop() {
   const query = useQuery({
     queryKey: queryKeys.drops.active(),
     queryFn: fetchActiveDrop,
+    meta: { silent: true },
   });
 
   useRealtimeInvalidation(

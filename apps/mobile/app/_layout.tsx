@@ -1,11 +1,47 @@
 import '../global.css'
 import { useEffect } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query'
 import { useAuthStore } from '../stores/auth'
-import { SnackbarProvider } from '../lib/snackbar'
+import { SnackbarProvider, toast } from '../lib/snackbar'
+import { formatError, isStaleSessionError } from '../lib/errors'
+import { supabase } from '../lib/supabase'
 
-const queryClient = new QueryClient()
+declare module '@tanstack/react-query' {
+  interface Register {
+    queryMeta: { silent?: boolean; userMessage?: string }
+    mutationMeta: { silent?: boolean; userMessage?: string }
+  }
+}
+
+type Meta = { silent?: boolean; userMessage?: string } | undefined
+
+// Stale-session always toasts and triggers signOut, regardless of meta.silent —
+// otherwise the user is left guessing why a screen with inline error UI silently
+// refuses to load. Other errors respect meta.silent.
+function reportError(error: unknown, meta: Meta) {
+  if (isStaleSessionError(error)) {
+    void supabase.auth.signOut()
+    toast.show(formatError(error))
+    return
+  }
+  if (meta?.silent) return
+  toast.show(meta?.userMessage ?? formatError(error))
+}
+
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => reportError(error, query.meta),
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, _vars, _ctx, mutation) => reportError(error, mutation.meta),
+  }),
+})
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, isLoading, initialize } = useAuthStore()
